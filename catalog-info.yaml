@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: member-lib
+  title: Member lib
+  description: Domain-crafted abstract Go packages for various use cases.
+  tags:
+    - "go"
+    - "pkg"
+  annotations:
+    github.com/project-slug: coopnorge/member-lib
+spec:
+  profile:
+    displayName: Member lib
+  type: library
+  lifecycle: experimental
+  owner: member
