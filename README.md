@@ -1,41 +1,15 @@
-# github-template-default
+# Member-Lib
 
-This is a basic template for when creating a Github repository.
+This repository contains a collection of Go packages designed from Member domain to provide generalized,
+abstract solutions applicable across a variety of use cases.
 
-## Initialization instructions:
+## Key Princeliness
 
-1. Setup [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+- Modularity - enables easier integration into existing projects.
+- Reusability - Reducing the need for duplicate code and speeding up the development process.
+- Scalability - Designed with scalability in mind, these packages can be easily adapted or extended.
 
-    In a new branch Add you own team as the default code owner. Replace 
-    `@coopnorge/engineering` with `@coopnorge/your-team-here` in
-    `./CODEOWNERS`. Leave the rest of the file as is.
+## Contributing
 
-    ```CODEOWNERS
-    * @coopnorge/<your-team-here>
-    
-    Dockerfile @coopnorge/github-review-bots @coopnorge/<your-team-here>
-    go.mod @coopnorge/github-review-bots @coopnorge/<your-team-here>
-    go.sum @coopnorge/github-review-bots @coopnorge/<your-team-here>
-    vendor @coopnorge/github-review-bots @coopnorge/<your-team-here>
-    pyproject.toml @coopnorge/github-review-bots @coopnorge/<your-team-here>
-    poetry.lock @coopnorge/github-review-bots @coopnorge/<your-team-here>
-    
-    /CODEOWNERS @coopnorge/cloud-security
-    .github/workflows/security-* @coopnorge/cloud-security
-    ```
-
-    Create a pull request, get it approved and merge it.
-
-2. Setup and fix default [workflows](https://docs.github.com/en/actions/using-workflows)
-
-    `.github/workflows/build.yaml` declares the default required GitHub Actions
-    job `build`. The job will fail on all builds in all repositories, except
-    <https://github.com/coopnorge/github-template-default>. Update the workflow
-    to do something that actually validates the content of your repository.
-
-3. Setup
-[dependabot](https://inventory.internal.coop/docs/default/system/cloud-platform/dev_build_deploy/github/guide_github_dependabot/)
-    to update all dependencies from all ecosystems in the repository.
-
-4. Create a new branch and start initializing your repository with the code you
-   need.
+Contributions to the repository are welcome. Please refer to the contribution guidelines for details on how to submit
+your packages or improvements.
