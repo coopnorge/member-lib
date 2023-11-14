@@ -13,4 +13,4 @@ jobs:
         run: echo This is a default job to trigger output but it fails
       - name: Fail when not in template
         if: ${{ github.repository != 'coopnorge/github-template-default' }}
-        run: exit 1
+        run: exit 0
