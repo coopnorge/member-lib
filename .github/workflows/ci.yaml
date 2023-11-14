@@ -1,0 +1,37 @@
+---
+name: CI
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    name: "Checking folders for changes"
+    runs-on: ubuntu-latest
+    outputs:
+      run-project-src-ci: ${{ steps.changes.outputs.repository_changes }}
+    steps:
+      - name: "Checkout..."
+        uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            repository_changes:
+              - '**'
+      - name: "Print changes..."
+        run: |
+          echo "::${{ steps.changes.outputs }}"
+
+  build:
+    needs:
+      - "setup"
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Done"
