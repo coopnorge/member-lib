@@ -8,7 +8,7 @@ abstract solutions applicable across a variety of use cases.
 ### In stalling specific package
 
 ```bash
-go get github.com/coopnorge/member-lib/{interested_package}
+go get github.com/coopnorge/member-lib/{package_of_interest}
 ```
 
 ### Importing in code
@@ -17,7 +17,7 @@ go get github.com/coopnorge/member-lib/{interested_package}
 package yourpackage
 
 import (
-  "github.com/coopnorge/member-lib/{interested_package}"
+  "github.com/coopnorge/member-lib/{package_of_interest}"
 )
 
 func YourCode() {
