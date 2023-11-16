@@ -24,9 +24,3 @@ func YourCode() {
   // TODO More of your code...
 }
 ```
-
-## Key Princeliness
-
-- Modularity - enables easier integration into existing projects.
-- Reusability - Reducing the need for duplicate code and speeding up the development process.
-- Scalability - Designed with scalability in mind, these packages can be easily adapted or extended.

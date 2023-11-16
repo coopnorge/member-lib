@@ -1,9 +1,7 @@
 ---
 name: CI
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
+  push: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,6 +12,7 @@ jobs:
     name: "Checking folders for changes"
     runs-on: ubuntu-latest
     outputs:
+      is_docs_changed: ${{ steps.filter.outputs.docs }}
       # TODO Uncomment it when go code will be added
       #is_repository_changed: ${{ steps.changes.outputs.changes }}
       is_repository_changed: 'false'
@@ -24,11 +23,24 @@ jobs:
         id: changes
         with:
           filters: |
+            docs:
+              - 'docs/**'
             changes:
               - '**'
       - name: "Print changes..."
         run: |
           echo "::${{ steps.changes.outputs }}"
+
+  techdocs:
+    name: "TechDocs"
+    needs: setup
+    if: ${{ needs.setup.outputs.is_docs_changed == 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+      pull-requests: read
+    uses: coopnorge/github-workflow-techdocs/.github/workflows/techdocs.yaml@v0
 
   golang-ci:
     needs:
@@ -44,9 +56,9 @@ jobs:
     name: Go
     uses: coopnorge/github-workflow-devtools-build-oci/.github/workflows/oci-ci.yaml@v1
     with:
-      xdg_cache_hash: ${{ needs.setup.outputs.xdg_cache_hash }}
+      xdg_cache_hash: ${{ needs.setup.outputs.xdg_cache_hash }}
       docker-compose-service: golang-devtools
-      publish: ${{ github.ref == 'refs/heads/main' }}
+      publish: ${{ github.ref == 'refs/heads/main' }}
       workload_identity_provider: projects/889992792607/locations/global/workloadIdentityPools/github-actions/providers/github-actions-provider
       service_account: helloworld-github-actions@helloworld-shared-0918.iam.gserviceaccount.com
     secrets: inherit
@@ -54,6 +66,7 @@ jobs:
   build:
     needs:
       - "setup"
+      - "techdocs"
     if: always()
     runs-on: ubuntu-latest
     steps:
