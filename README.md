@@ -1,7 +1,11 @@
 # Member-Lib
 
-This repository contains a collection of Go packages designed from Member domain to provide generalized,
-abstract solutions applicable across a variety of use cases.
+[![CI](https://github.com/coopnorge/member-lib/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/ci.yaml)
+[![Security](https://github.com/coopnorge/member-lib/actions/workflows/security-scan.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/security-scan.yaml)
+
+This repository contains a collection of Go packages designed from Member
+domain to provide generalized, abstract solutions applicable across a variety
+of use cases.
 
 ## Installing
 
@@ -24,9 +28,3 @@ func YourCode() {
   // TODO More of your code...
 }
 ```
-
-## Key Princeliness
-
-- Modularity - enables easier integration into existing projects.
-- Reusability - Reducing the need for duplicate code and speeding up the development process.
-- Scalability - Designed with scalability in mind, these packages can be easily adapted or extended.
