@@ -16,3 +16,7 @@ spec:
   type: library
   lifecycle: experimental
   owner: member
+  dependsOn:
+    - component:github-workflow-techdocs
+    - component:techdocs
+    - component:vale-coop

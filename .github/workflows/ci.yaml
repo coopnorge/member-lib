@@ -9,7 +9,6 @@ concurrency:
 
 jobs:
   setup:
-    name: "Checking folders for changes"
     runs-on: ubuntu-latest
     outputs:
       is_docs_changed: ${{ steps.filter.outputs.docs }}
@@ -20,7 +19,7 @@ jobs:
       - name: "Checkout..."
         uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
-        id: changes
+        id: filter
         with:
           filters: |
             docs:
