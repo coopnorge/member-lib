@@ -9,7 +9,7 @@ of use cases.
 
 ## Installing
 
-### In stalling specific package
+### Installing specific package
 
 ```bash
 go get github.com/coopnorge/member-lib/{package_of_interest}
