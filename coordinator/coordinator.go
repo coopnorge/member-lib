@@ -168,23 +168,18 @@ func (c *ServiceCoordinator) Stop() error {
 }
 
 // HandleShutdownSignals intercepts the OS signals to gracefully shutdown the service.
-func (c *ServiceCoordinator) HandleShutdownSignals() chan error {
+func (c *ServiceCoordinator) HandleShutdownSignals(onShutdownError func(error)) {
 	sigChan := make(chan os.Signal, 1)
-	errChan := make(chan error, 1)
 
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Goroutine waiting for OS signal
-	go func() {
+	go func() { // Goroutine waiting for OS signal
 		<-sigChan
 
-		// If there's an error, send it on the error channel
-		if err := c.Stop(); err != nil {
-			errChan <- err
+		if err := c.Stop(); err != nil && onShutdownError != nil {
+			onShutdownError(err)
 		}
 	}()
-
-	return errChan
 }
 
 // createChildContext from parent.
