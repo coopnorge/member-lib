@@ -53,22 +53,20 @@ Components must be:
 
 For validating and building Golang code you can use Coops docker tool.
 
+Build images:
+
 ```shell
-# build images
 docker compose build
 ```
 
+See available targets:
+
 ```shell
-# see available targets
 docker compose run --rm golang-devtools make help
 ```
 
-```shell
-# validate
-docker-compose run --rm golang-devtools make validate VERBOSE=all
-```
+Validate golang:
 
 ```shell
-# run in watch mode
-docker-compose run --rm golang-devtools make watch
+docker-compose run --rm golang-devtools make validate VERBOSE=all
 ```
