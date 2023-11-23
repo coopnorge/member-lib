@@ -1,4 +1,4 @@
-## Usage in Main
+# Basic usage
 
 An example of usage `coordinator` package in your entry-point function for the
 application `main`, you may use this code snippet to adapt it to your own
