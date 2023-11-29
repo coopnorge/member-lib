@@ -1,3 +1,5 @@
+<!-- markdownlint-disable-file MD009 -->
+
 # Introduction
 
 Welcome to our shared Golang library! This documentation provides insights into
@@ -21,4 +23,4 @@ repository and published to the world from the Coop organization.
 - Reusability - Reducing the need for duplicate code and speeding up the
   development process.
 - Scalability - Designed with scalability in mind, these packages can be easily
-  adapted or extended. 
+ adapted or extended. 
