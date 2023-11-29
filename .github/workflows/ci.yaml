@@ -12,9 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       is_docs_changed: ${{ steps.filter.outputs.docs }}
-      # TODO Uncomment it when go code will be added
-      #is_repository_changed: ${{ steps.changes.outputs.changes }}
-      is_repository_changed: 'false'
+      is_repository_changed: ${{ steps.changes.outputs.changes }}
     steps:
       - name: "Checkout..."
         uses: actions/checkout@v4
