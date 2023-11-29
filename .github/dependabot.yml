@@ -1,6 +1,14 @@
 ---
 version: 2
 
+registries:
+  github-coopnorge:
+    type: git
+    url: https://github.com
+    username: x-access-token
+    password: ${{secrets.DEPENDABOT_GHCR_PULL}}
+
+
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
