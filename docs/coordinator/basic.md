@@ -1,3 +1,6 @@
+<!-- markdownlint-disable-file MD031 -->
+<!-- markdownlint-disable-file MD010 -->
+
 # Basic usage
 
 An example of usage `coordinator` package in your entry-point function for the
