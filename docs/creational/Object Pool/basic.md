@@ -15,12 +15,12 @@ terms of resources or performance.
 
 ### Some possible use cases
 
-- You might need to control your `connections` to something, then you could use
-  this component to control state of connection and reuse it between
-  executions.
-- `Messages` - maybe you have need to track send messages, for example RPC
-  connection. Then there is option to set amount of usages and Resource Pool
-  Manger will create and destroy resourced.
+- You might need to have `Connection Management`. Then you could use
+  this component to balanced workload, reduces the initialisation overhead for
+  each connection, and improves connection management efficiency.
+- `Messages Tracking` - Manager will subsequently handle resource creation and
+  destruction processes. This use-case improves tracking, prevents message
+  loss, and ensures effective resource allocation and deallocation.
 
 ### How schematically it's works
 
