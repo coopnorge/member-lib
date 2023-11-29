@@ -28,3 +28,45 @@ func YourCode() {
   // TODO More of your code...
 }
 ```
+
+## Contribution
+
+### Documentation
+
+Technical documentation stored in `docs`, each sub folder represents golang
+component.
+To check how technical documentation loos like before merging it, you can run
+it in docker.
+
+```shell
+docker compose up techdocs
+```
+
+### Golang
+
+Components must be:
+
+- Abstract and not contain domain related names.
+- Components must be covered with tests.
+- Code style
+  follow [Coop Golan Guidelines](https://inventory.internal.coop/docs/default/component/guidelines/languages/go/#http-client)
+
+For validating and building Golang code you can use Coops docker tool.
+
+Build images:
+
+```shell
+docker compose build
+```
+
+See available targets:
+
+```shell
+docker compose run --rm golang-devtools make help
+```
+
+Validate golang:
+
+```shell
+docker-compose run --rm golang-devtools make validate VERBOSE=all
+```
