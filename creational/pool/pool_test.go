@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,4 +123,64 @@ func TestEmptyPool(t *testing.T) {
 	ackRes, ackErr := manager.AcquireResource()
 	assert.NotNil(t, ackErr)
 	assert.Nil(t, ackRes)
+}
+
+func TestLimitedResourceAndLimitedUsages(t *testing.T) {
+	testCases := []struct {
+		name             string
+		resourceCap      uint8
+		resourceUsageCap uint8
+		callForResource  uint8
+		factory          *stubFactory
+		assertFn         func(t *testing.T, ackErr error)
+	}{
+		{
+			"Test case 1: Limited Resource And Limited Usages",
+			2,
+			10,
+			20,
+			&stubFactory{},
+			func(t *testing.T, ackErr error) {
+				assert.NoError(t, ackErr)
+			},
+		},
+		{
+			"Test case 2: Limited Resource And Unlimited Usages",
+			2,
+			0,
+			20,
+			&stubFactory{},
+			func(t *testing.T, ackErr error) {
+				assert.NoError(t, ackErr)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			manager := NewResourcePoolManger[stubResource](tc.resourceCap, tc.resourceUsageCap, tc.factory)
+
+			var wg sync.WaitGroup
+
+			allResourceAreReused := true
+			for i := uint8(0); i < tc.resourceUsageCap; i++ {
+				wg.Add(1)
+				go func(t *testing.T) {
+					defer wg.Done()
+					ackRes, ackErr := manager.AcquireResource()
+
+					assert.NotNil(t, ackRes)
+					assert.NoError(t, ackErr)
+					if ackErr != nil {
+						allResourceAreReused = false
+					}
+
+					manager.ReleaseResource(ackRes)
+				}(t)
+			}
+
+			wg.Wait()
+			assert.True(t, allResourceAreReused, "expected to use all requested resource in test case")
+		})
+	}
 }
