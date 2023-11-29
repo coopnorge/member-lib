@@ -8,8 +8,13 @@ registries:
     username: x-access-token
     password: ${{secrets.DEPENDABOT_GHCR_PULL}}
 
-
 updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    registries:
+      - github-coopnorge
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
