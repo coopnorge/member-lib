@@ -20,5 +20,5 @@ repository and published to the world from the Coop organization.
 - Modularity - Simplify integration into existing projects.
 - Reusability - Reducing the need for duplicate code and speeding up the
   development process.
-- Scalability - Designed with scalability in mind, these
-  packages can be easily adapted or extended. 
+- Scalability - Designed with scalability in mind, these packages can be easily
+  adapted or extended. 
