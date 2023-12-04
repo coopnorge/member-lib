@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -53,9 +54,18 @@ func NewResourcePoolManger[T Resource](poolSize, resourceUsageLimit uint8, resou
 }
 
 // AcquireResource retrieves an available resource from the pool.
-// If no resource is available, a new one is created using the provided factory method.
+func (rpm *ResourcePoolManger[T]) AcquireResource(ctx context.Context) (*T, error) {
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("acquiring of resource was canceled")
+	default:
+		return rpm.getResource()
+	}
+}
+
+// getResource if no resource is available, a new one is created using the provided factory method.
 // Acquisition of resources is thread-safe.
-func (rpm *ResourcePoolManger[T]) AcquireResource() (*T, error) {
+func (rpm *ResourcePoolManger[T]) getResource() (*T, error) {
 	var acqManagedResource *managedResource[T]
 
 	rpm.pool.Range(func(_, value any) bool {
@@ -107,12 +117,13 @@ func (rpm *ResourcePoolManger[T]) ReleaseResource(releasedResource *T) {
 	} else {
 		rpm.pool.Delete(releasedResource)
 	}
+
 	managedResource.mu.Unlock()
 }
 
 // AcquireAndReleaseResource allows to execute action with needed Resource -> T.
-func (rpm *ResourcePoolManger[T]) AcquireAndReleaseResource(action func(resource *T) error) error {
-	r, rErr := rpm.AcquireResource()
+func (rpm *ResourcePoolManger[T]) AcquireAndReleaseResource(ctx context.Context, action func(resource *T) error) error {
+	r, rErr := rpm.AcquireResource(ctx)
 	if rErr != nil {
 		return rErr
 	}
