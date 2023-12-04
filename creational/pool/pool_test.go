@@ -134,12 +134,13 @@ func TestEmptyPool(t *testing.T) {
 
 func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 	testCases := []struct {
-		name             string
-		resourceCap      uint8
-		resourceUsageCap uint8
-		callForResource  uint8
-		factory          *stubFactory
-		assertFn         func(t *testing.T, ackErr error)
+		name                 string
+		resourceCap          uint8
+		resourceUsageCap     uint8
+		callForResource      uint8
+		factory              *stubFactory
+		allResourceAreReused bool
+		mu                   sync.Mutex
 	}{
 		{
 			"Test case 1: Limited Resource And Limited Usages",
@@ -147,9 +148,8 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 			10,
 			20,
 			&stubFactory{},
-			func(t *testing.T, ackErr error) {
-				assert.NoError(t, ackErr)
-			},
+			true,
+			sync.Mutex{},
 		},
 		{
 			"Test case 2: Limited Resource And Unlimited Usages",
@@ -157,9 +157,8 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 			0,
 			20,
 			&stubFactory{},
-			func(t *testing.T, ackErr error) {
-				assert.NoError(t, ackErr)
-			},
+			true,
+			sync.Mutex{},
 		},
 	}
 
@@ -169,27 +168,29 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 
 			var wg sync.WaitGroup
 
-			allResourceAreReused := true
-			for i := uint8(0); i < tc.resourceUsageCap; i++ {
+			for i := uint8(0); i < tc.callForResource; i++ {
 				wg.Add(1)
-				go func(t *testing.T) {
+				go func() {
+					tc.mu.Lock()
 					defer wg.Done()
+					defer tc.mu.Unlock()
 
-					unitContext := context.TODO()
-					ackRes, ackErr := manager.AcquireResource(unitContext)
-
-					assert.NotNil(t, ackRes)
-					assert.NoError(t, ackErr)
-					if ackErr != nil {
-						allResourceAreReused = false
+					ackRes, ackErr := manager.AcquireResource(context.TODO())
+					if ackRes == nil || ackErr != nil {
+						tc.allResourceAreReused = false
 					}
 
 					manager.ReleaseResource(ackRes)
-				}(t)
+				}()
 			}
 
 			wg.Wait()
-			assert.True(t, allResourceAreReused, "expected to use all requested resource in test case")
+
+			tc.mu.Lock()
+			defer tc.mu.Unlock()
+			if !tc.allResourceAreReused {
+				t.Fatal("expected to use all requested resource in test case")
+			}
 		})
 	}
 }
