@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +27,7 @@ func TestCreateAndManipulateResources(t *testing.T) {
 
 	// Attempt to acquire a newResource
 	unitContext := context.TODO()
-	newResource, firstAcqErr := manager.AcquireResource(unitContext)
+	newResource, firstAcqErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, firstAcqErr)
 	assert.Equal(t, "NewOne", newResource.SomeValue)
 
@@ -39,7 +40,7 @@ func TestCreateAndManipulateResources(t *testing.T) {
 	})
 
 	// Try to get more
-	_, secondAcqErr := manager.AcquireResource(unitContext)
+	_, secondAcqErr := manager.AcquireResource(unitContext, false)
 	assert.NotNil(t, secondAcqErr, "expected to be error since pool size is 1")
 
 	// Do some work
@@ -48,13 +49,13 @@ func TestCreateAndManipulateResources(t *testing.T) {
 	manager.ReleaseResource(newResource)
 
 	// Get it again - reuse
-	acqResource, acqErr := manager.AcquireResource(unitContext)
+	acqResource, acqErr := manager.AcquireResource(unitContext, false)
 	assert.Equal(t, "Mutated", acqResource.SomeValue)
 	assert.NoError(t, acqErr)
 	acqResource.SomeWork = true
 	manager.ReleaseResource(acqResource)
 
-	acqResource, acqErr = manager.AcquireResource(unitContext)
+	acqResource, acqErr = manager.AcquireResource(unitContext, false)
 	assert.NoError(t, acqErr)
 	assert.Equal(t, "NewOne", acqResource.SomeValue)
 }
@@ -65,14 +66,14 @@ func TestCreateAndManipulateResourcesNoLimitOfUsages(t *testing.T) {
 
 	all10 := 0
 	unitContext := context.TODO()
-	initRes, initResErr := manager.AcquireResource(unitContext)
+	initRes, initResErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, initResErr)
 	assert.NotNil(t, initRes)
 	initRes.SomeValue = "old"
 	manager.ReleaseResource(initRes)
 
 	for i := byte(0); i < 10; i++ {
-		res, err := manager.AcquireResource(unitContext)
+		res, err := manager.AcquireResource(unitContext, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, res)
 
@@ -98,7 +99,7 @@ func TestAcquireAndRelease(t *testing.T) {
 	})
 
 	assert.NoError(t, workErr)
-	updatedResource, ackErr := manager.AcquireResource(unitContext)
+	updatedResource, ackErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, ackErr)
 	assert.True(t, updatedResource.SomeWork)
 	assert.True(t, updatedResource.SomeValue == "unit_test")
@@ -116,7 +117,7 @@ func TestReleaseNotExistingResource(t *testing.T) {
 	manager.ReleaseResource(notManagedResource)
 
 	unitContext := context.TODO()
-	ackRes, ackErr := manager.AcquireResource(unitContext)
+	ackRes, ackErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, ackErr)
 	assert.False(t, ackRes.SomeWork == notManagedResource.SomeWork)
 	assert.False(t, ackRes.SomeValue == notManagedResource.SomeValue)
@@ -127,7 +128,7 @@ func TestEmptyPool(t *testing.T) {
 	manager := NewResourcePoolManger[stubResource](0, 0, factory)
 
 	unitContext := context.TODO()
-	ackRes, ackErr := manager.AcquireResource(unitContext)
+	ackRes, ackErr := manager.AcquireResource(unitContext, false)
 	assert.NotNil(t, ackErr)
 	assert.Nil(t, ackRes)
 }
@@ -175,7 +176,7 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 					defer wg.Done()
 					defer tc.mu.Unlock()
 
-					ackRes, ackErr := manager.AcquireResource(context.TODO())
+					ackRes, ackErr := manager.AcquireResource(context.TODO(), false)
 					if ackRes == nil || ackErr != nil {
 						tc.allResourceAreReused = false
 					}
@@ -202,11 +203,11 @@ func TestAcquireResourceWithCanceledContext(t *testing.T) {
 	unitContext, unitContextCancel := context.WithCancel(context.TODO())
 	unitContextCancel()
 
-	ackRes, ackErr := manager.AcquireResource(unitContext)
+	ackRes, ackErr := manager.AcquireResource(unitContext, false)
 	assert.NotNil(t, ackErr)
 	assert.Nil(t, ackRes)
 
-	ackRes, ackErr = manager.AcquireResource(context.TODO())
+	ackRes, ackErr = manager.AcquireResource(context.TODO(), false)
 	assert.NoError(t, ackErr)
 	assert.NotNil(t, ackRes)
 }
@@ -217,7 +218,7 @@ func TestReleaseResourceWithCanceledContext(t *testing.T) {
 
 	unitContext, unitContextCancel := context.WithCancel(context.TODO())
 
-	firstRes, firstResErr := manager.AcquireResource(unitContext)
+	firstRes, firstResErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, firstResErr)
 	assert.NotNil(t, firstRes)
 
@@ -225,12 +226,53 @@ func TestReleaseResourceWithCanceledContext(t *testing.T) {
 
 	manager.ReleaseResource(firstRes)
 
-	canceledRes, canceledResErr := manager.AcquireResource(unitContext)
+	canceledRes, canceledResErr := manager.AcquireResource(unitContext, false)
 	assert.NotNil(t, canceledResErr)
 	assert.Nil(t, canceledRes)
 
-	newAckRes, newAckResErr := manager.AcquireResource(context.TODO())
+	newAckRes, newAckResErr := manager.AcquireResource(context.TODO(), false)
 	assert.NoError(t, newAckResErr)
 	assert.NotNil(t, newAckRes)
 	assert.Same(t, firstRes, newAckRes, "Expected to have same address of resource since it's was returned before and reused now")
+}
+
+func TestAcquireResourceThatIsTakenButWithRetry(t *testing.T) {
+	manager := NewResourcePoolManger[stubResource](1, 0, new(stubFactory))
+	manager.retryOnResourceDelay = time.Nanosecond
+
+	unitContext := context.TODO()
+
+	// All good new resource
+	firstRes, firstResErr := manager.AcquireResource(unitContext, true)
+	assert.NoError(t, firstResErr)
+	assert.NotNil(t, firstRes)
+
+	// Try to get resource with retry
+	waitTimePassed := time.Now()
+
+	time.AfterFunc(time.Millisecond, func() { manager.ReleaseResource(firstRes) })
+	secondRes, secondResErr := manager.AcquireResource(unitContext, true)
+	assert.Nil(t, secondResErr)
+	assert.NotNil(t, secondRes)
+
+	isOverMillisecond := time.Since(waitTimePassed) > time.Millisecond
+	assert.True(t, isOverMillisecond, "expected to have more that 1 millisecond to get resource with attempt")
+}
+
+func TestAcquireResourceThatIsTakenButContextCanceledOnRetry(t *testing.T) {
+	manager := NewResourcePoolManger[stubResource](1, 0, new(stubFactory))
+	manager.retryOnResourceDelay = time.Nanosecond
+
+	unitContext, unitContextCancel := context.WithCancel(context.TODO())
+
+	// All good new resource
+	firstRes, firstResErr := manager.AcquireResource(unitContext, true)
+	assert.NoError(t, firstResErr)
+	assert.NotNil(t, firstRes)
+
+	time.AfterFunc(time.Millisecond, func() { unitContextCancel() })
+	secondRes, secondResErr := manager.AcquireResource(unitContext, true)
+	assert.NotNil(t, secondResErr)
+	assert.Nil(t, secondRes)
+	assert.NotNil(t, unitContext.Err())
 }

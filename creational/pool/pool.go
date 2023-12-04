@@ -2,10 +2,20 @@ package pool
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
+	"time"
 )
+
+const (
+	errorTemplatePoolLimit       string = "resource type of (%s) - pool limit reached"
+	errorTemplateContextCanceled string = "acquiring of resource was canceled by context"
+)
+
+const defaultRetryOnResourceDelay = time.Second
 
 type (
 	// Resource which will be managed by the ResourcePoolManger.
@@ -34,6 +44,8 @@ type (
 		pool               sync.Map
 		maxPoolSize        uint8
 		resourceUsageLimit uint8
+		// retryOnResourceDelay used when manipulation with resource must be retried.
+		retryOnResourceDelay time.Duration
 	}
 )
 
@@ -47,19 +59,39 @@ type (
 // Each resource can be used multiple times, controlled by the resourceUsageLimit, before being discarded or renewed.
 func NewResourcePoolManger[T Resource](poolSize, resourceUsageLimit uint8, resourceFactory ResourceFactory[T]) *ResourcePoolManger[T] {
 	return &ResourcePoolManger[T]{
-		factory:            resourceFactory,
-		resourceUsageLimit: resourceUsageLimit,
-		maxPoolSize:        poolSize,
+		factory:              resourceFactory,
+		resourceUsageLimit:   resourceUsageLimit,
+		maxPoolSize:          poolSize,
+		retryOnResourceDelay: defaultRetryOnResourceDelay,
 	}
 }
 
 // AcquireResource retrieves an available resource from the pool.
-func (rpm *ResourcePoolManger[T]) AcquireResource(ctx context.Context) (*T, error) {
+func (rpm *ResourcePoolManger[T]) AcquireResource(ctx context.Context, tryWaitWhenAvailable bool) (*T, error) {
+	onContextCanceledErr := errors.New(errorTemplateContextCanceled)
+
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("acquiring of resource was canceled")
+		return nil, onContextCanceledErr
 	default:
-		return rpm.getResource()
+		resource, getResourceErr := rpm.getResource()
+
+		if getResourceErr == nil {
+			return resource, nil
+		} else if !tryWaitWhenAvailable && getResourceErr != nil {
+			return nil, getResourceErr
+		}
+
+		if getResourceErr != nil && strings.Contains(getResourceErr.Error(), errorTemplatePoolLimit) {
+			return nil, getResourceErr
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, onContextCanceledErr
+		case <-time.After(rpm.retryOnResourceDelay):
+			return rpm.AcquireResource(ctx, tryWaitWhenAvailable)
+		}
 	}
 }
 
@@ -74,6 +106,8 @@ func (rpm *ResourcePoolManger[T]) getResource() (*T, error) {
 			return false
 		}
 
+		mr.mu.Lock()
+		defer mr.mu.Unlock()
 		if !mr.isAcquired {
 			// NOTE: If usageCount not 0 then it's set to be unlimited amount of usages.
 			if rpm.resourceUsageLimit == 0 || mr.usageCount < rpm.resourceUsageLimit {
@@ -123,7 +157,7 @@ func (rpm *ResourcePoolManger[T]) ReleaseResource(releasedResource *T) {
 
 // AcquireAndReleaseResource allows to execute action with needed Resource -> T.
 func (rpm *ResourcePoolManger[T]) AcquireAndReleaseResource(ctx context.Context, action func(resource *T) error) error {
-	r, rErr := rpm.AcquireResource(ctx)
+	r, rErr := rpm.AcquireResource(ctx, true)
 	if rErr != nil {
 		return rErr
 	}
@@ -153,7 +187,7 @@ func (rpm *ResourcePoolManger[T]) verifyCurrentPoolSize() error {
 	})
 
 	if currentPoolSize >= rpm.maxPoolSize {
-		return fmt.Errorf("resource type of (%s) - pool limit reached", reflect.TypeOf(acqResource))
+		return fmt.Errorf(errorTemplatePoolLimit, reflect.TypeOf(acqResource))
 	}
 
 	return nil
