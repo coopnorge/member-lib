@@ -61,9 +61,9 @@ Add to your code Resource Pool Manager
 // Remote procedure call service - "RPC"
 // `Connector` is a type for generic that must be managed in Resource Pool
 rpc.connectorPool = creational.NewResourcePoolManger[Connector](
-uint8(maxConn),
-uint8(maxMsgPerConn),
-&ConnectorFactory{cfg: cfg},
+  uint8(maxConn),
+  uint8(maxMsgPerConn),
+  &ConnectorFactory{cfg: cfg},
 )
 ```
 
@@ -71,11 +71,11 @@ Simple usage:
 
 ```go
 resourceErr := rpc.connectorPool.AcquireAndReleaseResource(func (connector *Connector) error {
-return connector.Connect()
+    return connector.Connect()
 })
 
 if resourceErr != nil {
-return fmt.Errorf("unable to open connection to database, error: %w", resourceErr)
+    return fmt.Errorf("unable to open connection to database, error: %w", resourceErr)
 }
 ```
 
@@ -83,25 +83,28 @@ Multi error handling:
 
 ```go
 var connErr error
-resourceErr := rpc.connectorPool.AcquireAndReleaseResource(func (connector *Connector) error {
-connErr := connector.Connect()
-return connErr
+  resourceErr := rpc.connectorPool.AcquireAndReleaseResource(ctx, func (connector *Connector) error {
+  connErr := connector.Connect()
+    return connErr
 })
 
 if connErr != nill {
-return fmt.Errorf("unable to open connection to database, error: %w", connErr)
+    return fmt.Errorf("unable to open connection to database, error: %w", connErr)
 }
 if resourceErr != nil {
-return fmt.Errorf("unable to acquire database connector, error: %w", resourceErr)
+    return fmt.Errorf("unable to acquire database connector, error: %w", resourceErr)
 }
 ```
 
-You also have control when to acquire and release resource
+You also have control when to acquire and release resource:
 
 ```go
-connector, ackErr := rpc.connectorPool.AcquireResource()
+// ctx - your parent context
+// isNeedToRetryOnTaken - function will try wait until first resource can be obtained
+// it will be stopped when context will be canceled
+connector, ackErr := rpc.connectorPool.AcquireResource(ctx, isNeedToRetryOnTaken)
 if ackErr != nil {
-return fmt.Errorf("unable to acquire database connector, error: %w", ackErr)
+    return fmt.Errorf("unable to acquire database connector, error: %w", ackErr)
 }
 defer rpc.connectorPool.ReleaseResource(connector)
 

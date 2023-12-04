@@ -44,7 +44,7 @@ type (
 		pool               sync.Map
 		maxPoolSize        uint8
 		resourceUsageLimit uint8
-		// retryOnResourceDelay used when manipulation with resource must be retried.
+		// retryOnResourceDelay used on resource manipulation (AcquireResource).
 		retryOnResourceDelay time.Duration
 	}
 )
@@ -67,7 +67,10 @@ func NewResourcePoolManager[T Resource](poolSize, resourceUsageLimit uint8, reso
 }
 
 // AcquireResource retrieves an available resource from the pool.
-func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, tryWaitWhenAvailable bool) (*T, error) {
+// ctx context.Context - controlling code flow, if `isNeedToRetryOnTaken` will be true
+// ResourcePoolManager will try to obtain Resource when it will be available recursively until context.Context will be canceled.
+// If there is no need to re-try, pass `isNeedToRetryOnTaken` as false.
+func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, isNeedToRetryOnTaken bool) (*T, error) {
 	onContextCanceledErr := errors.New(errorTemplateContextCanceled)
 
 	select {
@@ -78,7 +81,7 @@ func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, tryWaitW
 
 		if getResourceErr == nil {
 			return resource, nil
-		} else if !tryWaitWhenAvailable && getResourceErr != nil {
+		} else if !isNeedToRetryOnTaken && getResourceErr != nil {
 			return nil, getResourceErr
 		}
 
@@ -90,7 +93,7 @@ func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, tryWaitW
 		case <-ctx.Done():
 			return nil, onContextCanceledErr
 		case <-time.After(rpm.retryOnResourceDelay):
-			return rpm.AcquireResource(ctx, tryWaitWhenAvailable)
+			return rpm.AcquireResource(ctx, isNeedToRetryOnTaken)
 		}
 	}
 }
