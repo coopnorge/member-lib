@@ -1,8 +1,10 @@
 package pool
 
 import (
+	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,10 +23,11 @@ func (m *stubFactory) Construct() *stubResource {
 // Test creation and manipulation of resources
 func TestCreateAndManipulateResources(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 2, factory)
+	manager := NewResourcePoolManager[stubResource](1, 2, factory)
 
 	// Attempt to acquire a newResource
-	newResource, firstAcqErr := manager.AcquireResource()
+	unitContext := context.TODO()
+	newResource, firstAcqErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, firstAcqErr)
 	assert.Equal(t, "NewOne", newResource.SomeValue)
 
@@ -37,7 +40,7 @@ func TestCreateAndManipulateResources(t *testing.T) {
 	})
 
 	// Try to get more
-	_, secondAcqErr := manager.AcquireResource()
+	_, secondAcqErr := manager.AcquireResource(unitContext, false)
 	assert.NotNil(t, secondAcqErr, "expected to be error since pool size is 1")
 
 	// Do some work
@@ -46,30 +49,31 @@ func TestCreateAndManipulateResources(t *testing.T) {
 	manager.ReleaseResource(newResource)
 
 	// Get it again - reuse
-	acqResource, acqErr := manager.AcquireResource()
+	acqResource, acqErr := manager.AcquireResource(unitContext, false)
 	assert.Equal(t, "Mutated", acqResource.SomeValue)
 	assert.NoError(t, acqErr)
 	acqResource.SomeWork = true
 	manager.ReleaseResource(acqResource)
 
-	acqResource, acqErr = manager.AcquireResource()
+	acqResource, acqErr = manager.AcquireResource(unitContext, false)
 	assert.NoError(t, acqErr)
 	assert.Equal(t, "NewOne", acqResource.SomeValue)
 }
 
 func TestCreateAndManipulateResourcesNoLimitOfUsages(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 0, factory)
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
 
 	all10 := 0
-	initRes, initResErr := manager.AcquireResource()
+	unitContext := context.TODO()
+	initRes, initResErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, initResErr)
 	assert.NotNil(t, initRes)
 	initRes.SomeValue = "old"
 	manager.ReleaseResource(initRes)
 
 	for i := byte(0); i < 10; i++ {
-		res, err := manager.AcquireResource()
+		res, err := manager.AcquireResource(unitContext, false)
 		assert.NoError(t, err)
 		assert.NotNil(t, res)
 
@@ -84,9 +88,10 @@ func TestCreateAndManipulateResourcesNoLimitOfUsages(t *testing.T) {
 
 func TestAcquireAndRelease(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 0, factory)
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
 
-	workErr := manager.AcquireAndReleaseResource(func(resource *stubResource) error {
+	unitContext := context.TODO()
+	workErr := manager.AcquireAndReleaseResource(unitContext, func(resource *stubResource) error {
 		resource.SomeWork = true
 		resource.SomeValue = "unit_test"
 
@@ -94,7 +99,7 @@ func TestAcquireAndRelease(t *testing.T) {
 	})
 
 	assert.NoError(t, workErr)
-	updatedResource, ackErr := manager.AcquireResource()
+	updatedResource, ackErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, ackErr)
 	assert.True(t, updatedResource.SomeWork)
 	assert.True(t, updatedResource.SomeValue == "unit_test")
@@ -103,14 +108,16 @@ func TestAcquireAndRelease(t *testing.T) {
 
 func TestReleaseNotExistingResource(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 0, factory)
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
 
 	notManagedResource := &stubResource{
 		SomeWork:  true,
 		SomeValue: "not_exist",
 	}
 	manager.ReleaseResource(notManagedResource)
-	ackRes, ackErr := manager.AcquireResource()
+
+	unitContext := context.TODO()
+	ackRes, ackErr := manager.AcquireResource(unitContext, false)
 	assert.NoError(t, ackErr)
 	assert.False(t, ackRes.SomeWork == notManagedResource.SomeWork)
 	assert.False(t, ackRes.SomeValue == notManagedResource.SomeValue)
@@ -118,21 +125,23 @@ func TestReleaseNotExistingResource(t *testing.T) {
 
 func TestEmptyPool(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](0, 0, factory)
+	manager := NewResourcePoolManager[stubResource](0, 0, factory)
 
-	ackRes, ackErr := manager.AcquireResource()
+	unitContext := context.TODO()
+	ackRes, ackErr := manager.AcquireResource(unitContext, false)
 	assert.NotNil(t, ackErr)
 	assert.Nil(t, ackRes)
 }
 
 func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 	testCases := []struct {
-		name             string
-		resourceCap      uint8
-		resourceUsageCap uint8
-		callForResource  uint8
-		factory          *stubFactory
-		assertFn         func(t *testing.T, ackErr error)
+		name                 string
+		resourceCap          uint8
+		resourceUsageCap     uint8
+		callForResource      uint8
+		factory              *stubFactory
+		allResourceAreReused bool
+		mu                   sync.Mutex
 	}{
 		{
 			"Test case 1: Limited Resource And Limited Usages",
@@ -140,9 +149,8 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 			10,
 			20,
 			&stubFactory{},
-			func(t *testing.T, ackErr error) {
-				assert.NoError(t, ackErr)
-			},
+			true,
+			sync.Mutex{},
 		},
 		{
 			"Test case 2: Limited Resource And Unlimited Usages",
@@ -150,37 +158,121 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 			0,
 			20,
 			&stubFactory{},
-			func(t *testing.T, ackErr error) {
-				assert.NoError(t, ackErr)
-			},
+			true,
+			sync.Mutex{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			manager := NewResourcePoolManger[stubResource](tc.resourceCap, tc.resourceUsageCap, tc.factory)
+			manager := NewResourcePoolManager[stubResource](tc.resourceCap, tc.resourceUsageCap, tc.factory)
 
 			var wg sync.WaitGroup
 
-			allResourceAreReused := true
-			for i := uint8(0); i < tc.resourceUsageCap; i++ {
+			for i := uint8(0); i < tc.callForResource; i++ {
 				wg.Add(1)
-				go func(t *testing.T) {
+				go func() {
+					tc.mu.Lock()
 					defer wg.Done()
-					ackRes, ackErr := manager.AcquireResource()
+					defer tc.mu.Unlock()
 
-					assert.NotNil(t, ackRes)
-					assert.NoError(t, ackErr)
-					if ackErr != nil {
-						allResourceAreReused = false
+					ackRes, ackErr := manager.AcquireResource(context.TODO(), false)
+					if ackRes == nil || ackErr != nil {
+						tc.allResourceAreReused = false
 					}
 
 					manager.ReleaseResource(ackRes)
-				}(t)
+				}()
 			}
 
 			wg.Wait()
-			assert.True(t, allResourceAreReused, "expected to use all requested resource in test case")
+
+			tc.mu.Lock()
+			defer tc.mu.Unlock()
+			if !tc.allResourceAreReused {
+				t.Fatal("expected to use all requested resource in test case")
+			}
 		})
 	}
+}
+
+func TestAcquireResourceWithCanceledContext(t *testing.T) {
+	factory := &stubFactory{}
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
+
+	unitContext, unitContextCancel := context.WithCancel(context.TODO())
+	unitContextCancel()
+
+	ackRes, ackErr := manager.AcquireResource(unitContext, false)
+	assert.NotNil(t, ackErr)
+	assert.Nil(t, ackRes)
+
+	ackRes, ackErr = manager.AcquireResource(context.TODO(), false)
+	assert.NoError(t, ackErr)
+	assert.NotNil(t, ackRes)
+}
+
+func TestReleaseResourceWithCanceledContext(t *testing.T) {
+	factory := &stubFactory{}
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
+
+	unitContext, unitContextCancel := context.WithCancel(context.TODO())
+
+	firstRes, firstResErr := manager.AcquireResource(unitContext, false)
+	assert.NoError(t, firstResErr)
+	assert.NotNil(t, firstRes)
+
+	unitContextCancel()
+
+	manager.ReleaseResource(firstRes)
+
+	canceledRes, canceledResErr := manager.AcquireResource(unitContext, false)
+	assert.NotNil(t, canceledResErr)
+	assert.Nil(t, canceledRes)
+
+	newAckRes, newAckResErr := manager.AcquireResource(context.TODO(), false)
+	assert.NoError(t, newAckResErr)
+	assert.NotNil(t, newAckRes)
+	assert.Same(t, firstRes, newAckRes, "Expected to have same address of resource since it's was returned before and reused now")
+}
+
+func TestAcquireResourceThatIsTakenButWithRetry(t *testing.T) {
+	manager := NewResourcePoolManager[stubResource](1, 0, new(stubFactory))
+	manager.retryOnResourceDelay = time.Nanosecond
+
+	unitContext := context.TODO()
+
+	// All good new resource
+	firstRes, firstResErr := manager.AcquireResource(unitContext, true)
+	assert.NoError(t, firstResErr)
+	assert.NotNil(t, firstRes)
+
+	// Try to get resource with retry
+	waitTimePassed := time.Now()
+
+	time.AfterFunc(time.Millisecond, func() { manager.ReleaseResource(firstRes) })
+	secondRes, secondResErr := manager.AcquireResource(unitContext, true)
+	assert.Nil(t, secondResErr)
+	assert.NotNil(t, secondRes)
+
+	isOverMillisecond := time.Since(waitTimePassed) > time.Millisecond
+	assert.True(t, isOverMillisecond, "expected to have more that 1 millisecond to get resource with attempt")
+}
+
+func TestAcquireResourceThatIsTakenButContextCanceledOnRetry(t *testing.T) {
+	manager := NewResourcePoolManager[stubResource](1, 0, new(stubFactory))
+	manager.retryOnResourceDelay = time.Nanosecond
+
+	unitContext, unitContextCancel := context.WithCancel(context.TODO())
+
+	// All good new resource
+	firstRes, firstResErr := manager.AcquireResource(unitContext, true)
+	assert.NoError(t, firstResErr)
+	assert.NotNil(t, firstRes)
+
+	time.AfterFunc(time.Millisecond, func() { unitContextCancel() })
+	secondRes, secondResErr := manager.AcquireResource(unitContext, true)
+	assert.NotNil(t, secondResErr)
+	assert.Nil(t, secondRes)
+	assert.NotNil(t, unitContext.Err())
 }
