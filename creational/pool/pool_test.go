@@ -23,7 +23,7 @@ func (m *stubFactory) Construct() *stubResource {
 // Test creation and manipulation of resources
 func TestCreateAndManipulateResources(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 2, factory)
+	manager := NewResourcePoolManager[stubResource](1, 2, factory)
 
 	// Attempt to acquire a newResource
 	unitContext := context.TODO()
@@ -62,7 +62,7 @@ func TestCreateAndManipulateResources(t *testing.T) {
 
 func TestCreateAndManipulateResourcesNoLimitOfUsages(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 0, factory)
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
 
 	all10 := 0
 	unitContext := context.TODO()
@@ -88,7 +88,7 @@ func TestCreateAndManipulateResourcesNoLimitOfUsages(t *testing.T) {
 
 func TestAcquireAndRelease(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 0, factory)
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
 
 	unitContext := context.TODO()
 	workErr := manager.AcquireAndReleaseResource(unitContext, func(resource *stubResource) error {
@@ -108,7 +108,7 @@ func TestAcquireAndRelease(t *testing.T) {
 
 func TestReleaseNotExistingResource(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 0, factory)
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
 
 	notManagedResource := &stubResource{
 		SomeWork:  true,
@@ -125,7 +125,7 @@ func TestReleaseNotExistingResource(t *testing.T) {
 
 func TestEmptyPool(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](0, 0, factory)
+	manager := NewResourcePoolManager[stubResource](0, 0, factory)
 
 	unitContext := context.TODO()
 	ackRes, ackErr := manager.AcquireResource(unitContext, false)
@@ -165,7 +165,7 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			manager := NewResourcePoolManger[stubResource](tc.resourceCap, tc.resourceUsageCap, tc.factory)
+			manager := NewResourcePoolManager[stubResource](tc.resourceCap, tc.resourceUsageCap, tc.factory)
 
 			var wg sync.WaitGroup
 
@@ -198,7 +198,7 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 
 func TestAcquireResourceWithCanceledContext(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 0, factory)
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
 
 	unitContext, unitContextCancel := context.WithCancel(context.TODO())
 	unitContextCancel()
@@ -214,7 +214,7 @@ func TestAcquireResourceWithCanceledContext(t *testing.T) {
 
 func TestReleaseResourceWithCanceledContext(t *testing.T) {
 	factory := &stubFactory{}
-	manager := NewResourcePoolManger[stubResource](1, 0, factory)
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
 
 	unitContext, unitContextCancel := context.WithCancel(context.TODO())
 
@@ -237,7 +237,7 @@ func TestReleaseResourceWithCanceledContext(t *testing.T) {
 }
 
 func TestAcquireResourceThatIsTakenButWithRetry(t *testing.T) {
-	manager := NewResourcePoolManger[stubResource](1, 0, new(stubFactory))
+	manager := NewResourcePoolManager[stubResource](1, 0, new(stubFactory))
 	manager.retryOnResourceDelay = time.Nanosecond
 
 	unitContext := context.TODO()
@@ -260,7 +260,7 @@ func TestAcquireResourceThatIsTakenButWithRetry(t *testing.T) {
 }
 
 func TestAcquireResourceThatIsTakenButContextCanceledOnRetry(t *testing.T) {
-	manager := NewResourcePoolManger[stubResource](1, 0, new(stubFactory))
+	manager := NewResourcePoolManager[stubResource](1, 0, new(stubFactory))
 	manager.retryOnResourceDelay = time.Nanosecond
 
 	unitContext, unitContextCancel := context.WithCancel(context.TODO())
