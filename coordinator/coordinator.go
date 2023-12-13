@@ -65,7 +65,7 @@ func AddProcesses(p ...process.Process) Options {
 	}
 }
 
-// NewServiceCoordinator instance.
+// NewServiceCoordinator instance to manage the application.
 func NewServiceCoordinator(opts ...Options) (b *ServiceCoordinator) {
 	b = &ServiceCoordinator{
 		signals:     []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
@@ -110,7 +110,7 @@ func (c *ServiceCoordinator) Start() error {
 			)
 			defer procStopCtxCancel()
 
-			return proc.OnStop(procStopCtx)
+			return proc.OnStop(procStopCtx) //nolint:contextcheck // false positive, extended by c.createChildContext
 		})
 
 		bgTasksWG.Add(1)

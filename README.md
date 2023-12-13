@@ -1,6 +1,7 @@
 # Member-Lib
 
-[![CI](https://github.com/coopnorge/member-lib/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/ci.yaml)
+[![CI](https://github.com/coopnorge/member-lib/actions/workflows/golang-ci.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/golang-ci.yaml)
+[![CI](https://github.com/coopnorge/member-lib/actions/workflows/techdocs.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/techdocs.yaml)
 [![Security](https://github.com/coopnorge/member-lib/actions/workflows/security-scan.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/security-scan.yaml)
 
 This repository contains a collection of Go packages designed from Member
@@ -62,11 +63,17 @@ docker compose build
 See available targets:
 
 ```shell
-docker compose run --rm golang-devtools make help
+docker compose run --rm golang-devtools help
 ```
 
 Validate golang:
 
 ```shell
-docker-compose run --rm golang-devtools make validate VERBOSE=all
+docker compose run --rm golang-devtools validate VERBOSE=all
+```
+
+Test golang code:
+
+```shell
+docker compose run --rm golang-devtools test VERBOSE=all
 ```
