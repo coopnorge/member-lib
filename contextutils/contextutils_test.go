@@ -7,19 +7,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type stubContextKey struct{}
+
 func TestAddKeyValueToCtx(t *testing.T) {
 	ctx := context.Background()
 
-	newCtx := AddKeyValue(ctx, "ctxKey", "ctxValue")
+	newCtx := AddKeyValue(ctx, stubContextKey{}, "ctxValue")
 
-	assert.Equal(t, newCtx.Value("ctxKey"), "ctxValue")
+	assert.Equal(t, newCtx.Value(stubContextKey{}), "ctxValue")
 }
 
 func TestGetKeyValueFromCtx(t *testing.T) {
 	ctx := context.Background()
-	ctxWithValue := context.WithValue(ctx, "ctxKey", "ctxValue")
+	ctxWithValue := context.WithValue(ctx, stubContextKey{}, "ctxValue")
 
-	v, err := GetKeyValue[string, string](ctxWithValue, "ctxKey")
+	v, err := GetKeyValue[stubContextKey, string](ctxWithValue, stubContextKey{})
 
 	assert.Nil(t, err)
 	assert.Equal(t, v, "ctxValue")
@@ -27,9 +29,9 @@ func TestGetKeyValueFromCtx(t *testing.T) {
 
 func TestRemoveKeyFromCtx(t *testing.T) {
 	ctx := context.Background()
-	ctxWithValue := context.WithValue(ctx, "ctxKey", "ctxValue")
+	ctxWithValue := context.WithValue(ctx, stubContextKey{}, "ctxValue")
 
-	newCtx := RemoveKey(ctxWithValue, "ctxKey")
+	newCtx := RemoveKey(ctxWithValue, stubContextKey{})
 
-	assert.Equal(t, newCtx.Value("ctxKey"), nil)
+	assert.Equal(t, newCtx.Value(stubContextKey{}), nil)
 }

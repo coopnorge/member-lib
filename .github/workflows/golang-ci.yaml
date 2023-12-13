@@ -46,10 +46,8 @@ jobs:
         run: git config --global url."https://${{ secrets.REVIEWBOT_GITHUB_TOKEN }}:x-oauth-basic@github.com/coopnorge".insteadOf "https://github.com/coopnorge"
       - name: Build devtools
         run: docker compose build
-      - name: Validate
+      - name: Validate and Test
         run: docker compose run --rm ${{ env.docker-compose-service }} validate VERBOSE=all
-      - name: Test
-        run: docker compose run --rm ${{ env.docker-compose-service }} test VERBOSE=all
 
   build:
     needs:

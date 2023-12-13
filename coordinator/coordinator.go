@@ -110,7 +110,7 @@ func (c *ServiceCoordinator) Start() error {
 			)
 			defer procStopCtxCancel()
 
-			return proc.OnStop(procStopCtx)
+			return proc.OnStop(procStopCtx) //nolint:contextcheck // false positive, extended by c.createChildContext
 		})
 
 		bgTasksWG.Add(1)
