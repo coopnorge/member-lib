@@ -1,6 +1,7 @@
 # Member-Lib
 
-[![CI](https://github.com/coopnorge/member-lib/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/ci.yaml)
+[![CI](https://github.com/coopnorge/member-lib/actions/workflows/golang-ci.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/golang-ci.yaml)
+[![CI](https://github.com/coopnorge/member-lib/actions/workflows/techdocs.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/techdocs.yaml)
 [![Security](https://github.com/coopnorge/member-lib/actions/workflows/security-scan.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/security-scan.yaml)
 
 This repository contains a collection of Go packages designed from Member
