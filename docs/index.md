@@ -23,4 +23,4 @@ repository and published to the world from the Coop organization.
 - Reusability - Reducing the need for duplicate code and speeding up the
   development process.
 - Scalability - Designed with scalability in mind, these packages can be easily
- adapted or extended. 
+  adapted or extended.

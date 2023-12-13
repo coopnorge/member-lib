@@ -8,29 +8,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      is_repository_changed: ${{ steps.changes.outputs.changes }}
-    steps:
-      - name: "Checkout..."
-        uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          filters: |
-            changes:
-              - '**'
-      - name: "Print changes..."
-        run: |
-          echo "::${{ steps.changes.outputs }}"
-
   golang-ci:
-    name: Go Lang CI
+    name: "Validate and Test Go code"
     runs-on: ubuntu-latest
-    needs:
-      - setup
-    if: ${{ needs.setup.outputs.is_repository_changed == 'true' }}
     concurrency:
       group: ${{ github.repository }}-${{ github.workflow }}-golang-ci-${{ github.ref }}
       cancel-in-progress: true
@@ -41,6 +21,27 @@ jobs:
     env:
       docker-compose-service: golang-devtools
     steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - id: xdg_cache_hash
+        run: echo "xdg_cache_hash=${{hashFiles('./docker-compose.yml', './docker-compose/Dockerfile', './go.sum')}}" >> $GITHUB_OUTPUT
+      - name: Cache xdg
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.XDG_CACHE_HOME }}
+          key: xdg-${{ github.repository }}-${{ github.job }}-${{ steps.xdg_cache_hash.outputs.xdg_cache_hash }}
+          restore-keys: |
+            xdg-${{ github.repository }}-${{ github.job }}-${{ steps.xdg_cache_hash.outputs.xdg_cache_hash }}
+            xdg-${{ github.repository }}-${{ github.job }}-
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Configure access to internal and private GitHub repos
         run: git config --global url."https://${{ secrets.REVIEWBOT_GITHUB_TOKEN }}:x-oauth-basic@github.com/coopnorge".insteadOf "https://github.com/coopnorge"
       - name: Build devtools
@@ -52,7 +53,6 @@ jobs:
 
   build:
     needs:
-      - "setup"
       - "golang-ci"
     if: always()
     runs-on: ubuntu-latest

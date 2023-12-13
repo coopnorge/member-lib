@@ -65,7 +65,7 @@ func AddProcesses(p ...process.Process) Options {
 	}
 }
 
-// NewServiceCoordinator instance.
+// NewServiceCoordinator instance to manage the application.
 func NewServiceCoordinator(opts ...Options) (b *ServiceCoordinator) {
 	b = &ServiceCoordinator{
 		signals:     []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
