@@ -63,11 +63,17 @@ docker compose build
 See available targets:
 
 ```shell
-docker compose run --rm golang-devtools make help
+docker compose run --rm golang-devtools help
 ```
 
 Validate golang:
 
 ```shell
-docker-compose run --rm golang-devtools make validate VERBOSE=all
+docker compose run --rm golang-devtools validate VERBOSE=all
+```
+
+Test golang code:
+
+```shell
+docker compose run --rm golang-devtools test VERBOSE=all
 ```

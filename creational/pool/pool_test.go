@@ -103,7 +103,6 @@ func TestAcquireAndRelease(t *testing.T) {
 	assert.NoError(t, ackErr)
 	assert.True(t, updatedResource.SomeWork)
 	assert.True(t, updatedResource.SomeValue == "unit_test")
-
 }
 
 func TestReleaseNotExistingResource(t *testing.T) {
@@ -163,7 +162,9 @@ func TestLimitedResourceAndLimitedUsages(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
+	for i := range testCases {
+		tc := &testCases[i]
+
 		t.Run(tc.name, func(t *testing.T) {
 			manager := NewResourcePoolManager[stubResource](tc.resourceCap, tc.resourceUsageCap, tc.factory)
 
