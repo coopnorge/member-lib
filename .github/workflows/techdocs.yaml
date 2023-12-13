@@ -1,0 +1,48 @@
+---
+name: Technical documentation CI
+on:
+  push: { }
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      is_repository_changed: ${{ steps.changes.outputs.changes }}
+    steps:
+      - name: "Checkout..."
+        uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            docs:
+              - 'docs/**'
+      - name: "Print changes..."
+        run: |
+          echo "::${{ steps.changes.outputs }}"
+
+  techdocs:
+    name: "TechDocs"
+    needs: setup
+    if: ${{ needs.setup.outputs.is_docs_changed == 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+      pull-requests: read
+    uses: coopnorge/github-workflow-techdocs/.github/workflows/techdocs.yaml@v0
+
+  build:
+    needs:
+      - "techdocs"
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 1
+        name: "Catch errors"
+        if: |
+          needs.techdocs.result == 'failure'
