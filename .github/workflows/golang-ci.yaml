@@ -1,5 +1,5 @@
 ---
-name: Golang CI
+name: "Golang CI"
 on:
   push: { }
 
@@ -41,7 +41,6 @@ jobs:
     env:
       docker-compose-service: golang-devtools
     steps:
-      - uses: actions/checkout@v4
       - name: Configure access to internal and private GitHub repos
         run: git config --global url."https://${{ secrets.REVIEWBOT_GITHUB_TOKEN }}:x-oauth-basic@github.com/coopnorge".insteadOf "https://github.com/coopnorge"
       - name: Build devtools
