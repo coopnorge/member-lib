@@ -10,7 +10,7 @@ import (
 func TestAddKeyValueToCtx(t *testing.T) {
 	ctx := context.Background()
 
-	newCtx := AddKeyValueToCtx(ctx, "ctxKey", "ctxValue")
+	newCtx := AddKeyValue(ctx, "ctxKey", "ctxValue")
 
 	assert.Equal(t, newCtx.Value("ctxKey"), "ctxValue")
 }
@@ -19,7 +19,7 @@ func TestGetKeyValueFromCtx(t *testing.T) {
 	ctx := context.Background()
 	ctxWithValue := context.WithValue(ctx, "ctxKey", "ctxValue")
 
-	v, err := GetKeyValueFromCtx[string, string](ctxWithValue, "ctxKey")
+	v, err := GetKeyValue[string, string](ctxWithValue, "ctxKey")
 
 	assert.Nil(t, err)
 	assert.Equal(t, v, "ctxValue")
@@ -29,7 +29,7 @@ func TestRemoveKeyFromCtx(t *testing.T) {
 	ctx := context.Background()
 	ctxWithValue := context.WithValue(ctx, "ctxKey", "ctxValue")
 
-	newCtx := RemoveKeyFromCtx(ctxWithValue, "ctxKey")
+	newCtx := RemoveKey(ctxWithValue, "ctxKey")
 
 	assert.Equal(t, newCtx.Value("ctxKey"), nil)
 }
