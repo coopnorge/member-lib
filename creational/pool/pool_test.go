@@ -277,3 +277,12 @@ func TestAcquireResourceThatIsTakenButContextCanceledOnRetry(t *testing.T) {
 	assert.Nil(t, secondRes)
 	assert.NotNil(t, unitContext.Err())
 }
+
+func TestModifyRetryOnResourceDelay(t *testing.T) {
+	manager := NewResourcePoolManager[stubResource](1, 0, new(stubFactory))
+
+	assert.True(t, manager.retryOnResourceDelay == defaultRetryOnResourceDelay)
+
+	manager.SetRetryOnResourceDelay(time.Nanosecond)
+	assert.True(t, manager.GetRetryOnResourceDelay() == time.Nanosecond)
+}
