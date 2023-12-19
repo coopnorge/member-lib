@@ -171,108 +171,138 @@ func TestParseDateComponent(t *testing.T) {
 
 func TestParseYear(t *testing.T) {
 	var testCases = []struct {
-		description string
-		year        string
-		layout      string
-		outputValue uint16
+		description  string
+		year         string
+		layout       string
+		isSuccessful bool
+		outputValue  uint16
 	}{
 		{
-			description: "should return '0' because layout is incorrect",
-			year:        "2024",
-			layout:      "2066",
-			outputValue: 0,
+			description:  "should return '0' because layout is incorrect",
+			year:         "2024",
+			layout:       "2066",
+			isSuccessful: false,
+			outputValue:  0,
 		},
 		{
-			description: "should return '0' because year is incorrect",
-			year:        "1",
-			layout:      "2006",
-			outputValue: 0,
+			description:  "should return '0' because year is incorrect",
+			year:         "1",
+			layout:       "2006",
+			isSuccessful: false,
+			outputValue:  0,
 		},
 		{
-			description: "should succeed and return the correct year",
-			year:        "2024",
-			layout:      "2006",
-			outputValue: 2024,
+			description:  "should succeed and return the correct year",
+			year:         "2024",
+			layout:       "2006",
+			isSuccessful: true,
+			outputValue:  2024,
 		},
 	}
 
 	for _, testCase := range testCases {
-		y, _ := ParseYear(testCase.year, testCase.layout)
+		y, err := ParseYear(testCase.year, testCase.layout)
 
 		t.Run(testCase.description, func(t *testing.T) {
 			assert.Equal(t, y, testCase.outputValue)
+
+			if testCase.isSuccessful {
+				assert.NoError(t, err, "Expected no error, but got an error")
+			} else {
+				assert.Error(t, err, "Expected an error, but got no error")
+			}
 		})
 	}
 }
 
 func TestParseMonth(t *testing.T) {
 	var testCases = []struct {
-		description string
-		month       string
-		layout      string
-		outputValue uint8
+		description  string
+		month        string
+		layout       string
+		isSuccessful bool
+		outputValue  uint8
 	}{
 		{
-			description: "should return '0' because layout is incorrect",
-			month:       "1",
-			layout:      "2066",
-			outputValue: 0,
+			description:  "should return '0' because layout is incorrect",
+			month:        "1",
+			layout:       "2066",
+			isSuccessful: false,
+			outputValue:  0,
 		},
 		{
-			description: "should return '0' because month is incorrect",
-			month:       "13",
-			layout:      "1",
-			outputValue: 0,
+			description:  "should return '0' because month is incorrect",
+			month:        "13",
+			layout:       "1",
+			isSuccessful: false,
+			outputValue:  0,
 		},
 		{
-			description: "should succeed and return the correct month",
-			month:       "5",
-			layout:      "1",
-			outputValue: 5,
+			description:  "should succeed and return the correct month",
+			month:        "5",
+			layout:       "1",
+			isSuccessful: true,
+			outputValue:  5,
 		},
 	}
 
 	for _, testCase := range testCases {
-		m, _ := ParseMonth(testCase.month, testCase.layout)
+		m, err := ParseMonth(testCase.month, testCase.layout)
 
 		t.Run(testCase.description, func(t *testing.T) {
 			assert.Equal(t, m, testCase.outputValue)
+
+			if testCase.isSuccessful {
+				assert.NoError(t, err, "Expected no error, but got an error")
+			} else {
+				assert.Error(t, err, "Expected an error, but got no error")
+			}
 		})
 	}
 }
 
 func TestParseDayOfTheMonth(t *testing.T) {
 	var testCases = []struct {
-		description string
-		day         string
-		layout      string
-		outputValue uint8
+		description  string
+		day          string
+		layout       string
+		isSuccessful bool
+		outputValue  uint8
 	}{
 		{
-			description: "should return '0' because layout is incorrect",
-			day:         "1",
-			layout:      "2066",
-			outputValue: 0,
+			description:  "should return '0' because layout is incorrect",
+			day:          "1",
+			layout:       "2066",
+			isSuccessful: false,
+			outputValue:  0,
 		},
 		{
-			description: "should return '0' because day is incorrect",
-			day:         "32",
-			layout:      "1",
-			outputValue: 0,
+			description:  "should return '0' because day is incorrect",
+			day:          "32",
+			layout:       "1",
+			isSuccessful: false,
+			outputValue:  0,
 		},
 		{
-			description: "should succeed and return the correct day",
-			day:         "5",
-			layout:      "2",
-			outputValue: 5,
+			description:  "should succeed and return the correct day",
+			day:          "5",
+			layout:       "2",
+			isSuccessful: true,
+			outputValue:  5,
 		},
 	}
 
 	for _, testCase := range testCases {
-		d, _ := ParseDayOfTheMonth(testCase.day, testCase.layout)
+		d, err := ParseDayOfTheMonth(testCase.day, testCase.layout)
 
 		t.Run(testCase.description, func(t *testing.T) {
 			assert.Equal(t, d, testCase.outputValue)
+
+			if testCase.isSuccessful {
+				assert.NoError(t, err, "Expected no error, but got an error")
+			} else {
+				assert.Error(t, err, "Expected an error, but got no error")
+			}
 		})
 	}
 }
