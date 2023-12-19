@@ -46,6 +46,7 @@ type (
 		resourceUsageLimit uint8
 		// retryOnResourceDelay used on resource manipulation (AcquireResource).
 		retryOnResourceDelay time.Duration
+		mu                   sync.RWMutex
 	}
 )
 
@@ -194,4 +195,20 @@ func (rpm *ResourcePoolManager[T]) verifyCurrentPoolSize() error {
 	}
 
 	return nil
+}
+
+// GetRetryOnResourceDelay returns the delay duration before the next retry attempt.
+func (rpm *ResourcePoolManager[T]) GetRetryOnResourceDelay() time.Duration {
+	rpm.mu.RLock()
+	defer rpm.mu.RUnlock()
+
+	return rpm.retryOnResourceDelay
+}
+
+// SetRetryOnResourceDelay configures the delay duration for subsequent retry attempts.
+func (rpm *ResourcePoolManager[T]) SetRetryOnResourceDelay(retryOnResourceDelay time.Duration) {
+	rpm.mu.Lock()
+	defer rpm.mu.Unlock()
+
+	rpm.retryOnResourceDelay = retryOnResourceDelay
 }
