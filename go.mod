@@ -6,7 +6,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sync v0.5.0
-	google.golang.org/grpc v1.60.0
+	google.golang.org/grpc v1.60.1
 )
 
 require (
