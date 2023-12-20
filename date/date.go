@@ -1,36 +1,9 @@
-package dateutils
+package date
 
 import (
 	"fmt"
 	"time"
 )
-
-// validateYearLayout ensures that the year layout is either '2006' or '06'
-func validateYearLayout(layout string) error {
-	if layout != "06" && layout != "2006" {
-		return fmt.Errorf("invalid year layout '%s'", layout)
-	}
-
-	return nil
-}
-
-// validateMonthLayout ensures that the month layout is 'Jan', 'January', '01' or '1'
-func validateMonthLayout(layout string) error {
-	if layout != "Jan" && layout != "January" && layout != "1" && layout != "01" {
-		return fmt.Errorf("invalid month layout '%s'", layout)
-	}
-
-	return nil
-}
-
-// validateDayOfTheMonthLayout ensures that the day layout is '2', '_2' or '02'
-func validateDayOfTheMonthLayout(layout string) error {
-	if layout != "2" && layout != "_2" && layout != "02" {
-		return fmt.Errorf("invalid day layout '%s'", layout)
-	}
-
-	return nil
-}
 
 // ParseDateComponent parses year, month or day strings and returns a time object
 func ParseDateComponent(layout, dc string) (time.Time, error) {
@@ -91,7 +64,35 @@ func IsLeapYear(year, layout string) (bool, error) {
 		return false, parseYearErr
 	}
 
-	condition := (y%400 == 0) || (y%4 == 0 && y%100 != 0)
+	// A leap year if it is divisible by 4 but not by 100, or it is divisible by 400.
+	isLeap := (y%4 == 0 && y%100 != 0) || (y%400 == 0)
 
-	return condition, nil
+	return isLeap, nil
+}
+
+// validateYearLayout ensures that the year layout is either '2006' or '06'
+func validateYearLayout(layout string) error {
+	if layout != "06" && layout != "2006" {
+		return fmt.Errorf("invalid year layout '%s'", layout)
+	}
+
+	return nil
+}
+
+// validateMonthLayout ensures that the month layout is 'Jan', 'January', '01' or '1'
+func validateMonthLayout(layout string) error {
+	if layout != "Jan" && layout != "January" && layout != "1" && layout != "01" {
+		return fmt.Errorf("invalid month layout '%s'", layout)
+	}
+
+	return nil
+}
+
+// validateDayOfTheMonthLayout ensures that the day layout is '2', '_2' or '02'
+func validateDayOfTheMonthLayout(layout string) error {
+	if layout != "2" && layout != "_2" && layout != "02" {
+		return fmt.Errorf("invalid day layout '%s'", layout)
+	}
+
+	return nil
 }
