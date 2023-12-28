@@ -62,7 +62,7 @@ import (
 
 func main() {
   ctx := context.Background()
-	ctxWithValue := context.WithValue(ctx, "foo", "bar")
+  ctxWithValue := context.WithValue(ctx, "foo", "bar")
 
   v, err := GetKeyValue[string, string](ctxWithValue, "foo")
   if err != nil {
@@ -98,7 +98,7 @@ import (
 
 func main() {
   ctx := context.Background()
-	ctxWithValue := context.WithValue(ctx, "foo", "bar")
+  ctxWithValue := context.WithValue(ctx, "foo", "bar")
 
   ctxWithoutValue := RemoveKey(ctxWithValue, "foo", "bar")
 
