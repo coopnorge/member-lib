@@ -144,7 +144,7 @@ func main() {
 }
 ```
 
-### 5. IsLeapYear 
+### 5. IsLeapYear
 
 IsLeapYear determines whether a specific year is a leap year.
 
