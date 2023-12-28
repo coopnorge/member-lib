@@ -1,24 +1,24 @@
 # Basic usage
 
-## Functions 
+## Functions
 
 ### 1. ParseDateComponent
 
 ParseDateComponent parses year, month or day strings and returns a
 time object.
 
-- #### Parameters:
+- #### Parameters
   - layout (string): The layout specifying the format of the date component.
 For example, "2006" or "06".
   - date component (string): The date component to be parsed. For example,
 "2024".
 
-- #### Returns:
+- #### Returns
   - time.Time: A date object representing the parsed date component.
   - error: An error, if any, encountered during the parsing of the
 date component string.
 
-- #### Example:
+- #### Example
 ```go
 package main
 
@@ -40,17 +40,17 @@ func main() {
 
 ParseYear parses year string
 
-- #### Parameters:
+- #### Parameters
   - year (string): The year string to be parsed.
   - layout (string): The layout specifying the format of the year string.
 For example, "2006" or "06".
 
-- #### Returns:
+- #### Returns
   - year (uint16): A uint16 number representing the parsed year.
   - error: An error, if any, encountered during the parsing of the year
 string.
   
-- #### Example:
+- #### Example
 ```go
 package main
 
@@ -72,17 +72,17 @@ func main() {
 
 ParseMonth parses month string
 
-- #### Parameters:
+- #### Parameters
   - month (string): The month string to be parsed.
   - layout (string): The layout specifying the format of the month string. For example,
 "Jan", "January", "01" or "1"
 
-- #### Returns:
+- #### Returns
   - month (uint8): A uint8 number representing the parsed month.
   - error: An error, if any, encountered during the parsing of the month
 string.
   
-- #### Example:
+- #### Example
 ```go
 package main
 
@@ -104,17 +104,17 @@ func main() {
 
 ParseDayOfTheMonth parses day string
 
-- #### Parameters:
+- #### Parameters
   - day (string): The day string to be parsed.
   - layout (string): The layout specifying the format of the day string.
 For example, "2", "_2" or "02"
 
-- #### Returns:
+- #### Returns
   - day (uint8): A uint8 number representing the parsed day.
   - error: An error, if any, encountered during the parsing
 of the day string.
   
-- #### Example:
+- #### Example
 ```go
 package main
 
@@ -136,18 +136,18 @@ func main() {
 
 IsLeapYear determines whether a specific year is a leap year.
 
-- #### Parameters:
+- #### Parameters
   - year (string): The year to be checked for leap year status.
   - layout (string): The layout specifying the format of the year
 string. For example, "2006" or "06".
   
-- #### Returns:
+- #### Returns
   - bool: A boolean indicating whether the specified year is a leap
 year (true) or not (false).
   - error: An error, if any, encountered during the parsing of the
 year string.
 
-- #### Example:
+- #### Example
 ```go
 package main
 
