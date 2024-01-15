@@ -251,7 +251,8 @@ func TestAcquireResourceThatIsTakenButWithRetry(t *testing.T) {
 	// Try to get resource with retry
 	waitTimePassed := time.Now()
 
-	time.AfterFunc(time.Millisecond, func() { manager.ReleaseResource(firstRes) })
+	time.AfterFunc(time.Nanosecond, func() { manager.ReleaseResource(firstRes) })
+	time.Sleep(time.Millisecond)
 	secondRes, secondResErr := manager.AcquireResource(unitContext, true)
 	assert.Nil(t, secondResErr)
 	assert.NotNil(t, secondRes)
