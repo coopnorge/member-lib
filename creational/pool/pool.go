@@ -3,16 +3,15 @@ package pool
 import (
 	"context"
 	"errors"
-	"fmt"
-	"reflect"
-	"strings"
 	"sync"
 	"time"
 )
 
-const (
-	errorTemplatePoolLimit       string = "resource type of (%s) - pool limit reached"
-	errorTemplateContextCanceled string = "acquiring of resource was canceled by context"
+var (
+	// ErrorPoolLimitReached thrown when ResourcePoolManager current pool size is reached to Maximum allowed size.
+	ErrorPoolLimitReached = errors.New("resource - pool limit reached")
+	// ErrorContextCanceled thrown when client (passed) context is canceled and operation must be canceled.
+	ErrorContextCanceled = errors.New("acquiring of resource was canceled by context")
 )
 
 const defaultRetryOnResourceDelay = time.Second
@@ -72,11 +71,9 @@ func NewResourcePoolManager[T Resource](poolSize, resourceUsageLimit uint8, reso
 // ResourcePoolManager will try to obtain Resource when it will be available recursively until context.Context will be canceled.
 // If there is no need to re-try, pass `isNeedToRetryOnTaken` as false.
 func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, isNeedToRetryOnTaken bool) (*T, error) {
-	onContextCanceledErr := errors.New(errorTemplateContextCanceled)
-
 	select {
 	case <-ctx.Done():
-		return nil, onContextCanceledErr
+		return nil, ErrorContextCanceled
 	default:
 		resource, getResourceErr := rpm.getResource()
 
@@ -86,13 +83,13 @@ func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, isNeedTo
 			return nil, getResourceErr
 		}
 
-		if getResourceErr != nil && strings.Contains(getResourceErr.Error(), errorTemplatePoolLimit) {
+		if getResourceErr != nil && errors.Is(getResourceErr, ErrorPoolLimitReached) {
 			return nil, getResourceErr
 		}
 
 		select {
 		case <-ctx.Done():
-			return nil, onContextCanceledErr
+			return nil, ErrorContextCanceled
 		case <-time.After(rpm.retryOnResourceDelay):
 			return rpm.AcquireResource(ctx, isNeedToRetryOnTaken)
 		}
@@ -178,7 +175,6 @@ func (rpm *ResourcePoolManager[T]) createManagedResource() *managedResource[T] {
 
 func (rpm *ResourcePoolManager[T]) verifyCurrentPoolSize() error {
 	var currentPoolSize uint8
-	var acqResource T
 
 	// NOTE: Allow max size of type
 	if rpm.maxPoolSize == ^uint8(0) {
@@ -191,7 +187,7 @@ func (rpm *ResourcePoolManager[T]) verifyCurrentPoolSize() error {
 	})
 
 	if currentPoolSize >= rpm.maxPoolSize {
-		return fmt.Errorf(errorTemplatePoolLimit, reflect.TypeOf(acqResource))
+		return ErrorPoolLimitReached
 	}
 
 	return nil
