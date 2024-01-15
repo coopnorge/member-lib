@@ -253,6 +253,7 @@ func TestAcquireResourceThatIsTakenButWithRetry(t *testing.T) {
 
 	time.AfterFunc(time.Nanosecond, func() { manager.ReleaseResource(firstRes) })
 	time.Sleep(time.Millisecond)
+
 	secondRes, secondResErr := manager.AcquireResource(unitContext, true)
 	assert.Nil(t, secondResErr)
 	assert.NotNil(t, secondRes)
@@ -272,7 +273,9 @@ func TestAcquireResourceThatIsTakenButContextCanceledOnRetry(t *testing.T) {
 	assert.NoError(t, firstResErr)
 	assert.NotNil(t, firstRes)
 
-	time.AfterFunc(time.Millisecond, func() { unitContextCancel() })
+	time.AfterFunc(time.Nanosecond, func() { unitContextCancel() })
+	time.Sleep(time.Millisecond)
+
 	secondRes, secondResErr := manager.AcquireResource(unitContext, true)
 	assert.NotNil(t, secondResErr)
 	assert.Nil(t, secondRes)
