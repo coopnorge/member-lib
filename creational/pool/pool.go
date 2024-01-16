@@ -11,7 +11,7 @@ var (
 	// ErrorPoolLimitReached thrown when ResourcePoolManager current pool size is reached to Maximum allowed size.
 	ErrorPoolLimitReached = errors.New("resource - pool limit reached")
 	// ErrorContextCanceled thrown when client (passed) context is canceled and operation must be canceled.
-	ErrorContextCanceled = errors.New("acquiring of resource was canceled by context")
+	ErrorContextCanceled = context.DeadlineExceeded
 )
 
 const defaultRetryOnResourceDelay = time.Second
@@ -71,28 +71,31 @@ func NewResourcePoolManager[T Resource](poolSize, resourceUsageLimit uint8, reso
 // ResourcePoolManager will try to obtain Resource when it will be available recursively until context.Context will be canceled.
 // If there is no need to re-try, pass `isNeedToRetryOnTaken` as false.
 func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, isNeedToRetryOnTaken bool) (*T, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	resource, getResourceErr := rpm.getResource()
+	if getResourceErr == nil {
+		return resource, nil
+	} else if !isNeedToRetryOnTaken && getResourceErr != nil {
+		return nil, getResourceErr
+	}
+
+	// NOTE: Ignore pool limit since retry will handle resource acquiring in recursion.
+	if !errors.Is(getResourceErr, ErrorPoolLimitReached) {
+		return nil, getResourceErr
+	}
+
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	select {
 	case <-ctx.Done():
 		return nil, ErrorContextCanceled
-	default:
-		resource, getResourceErr := rpm.getResource()
-
-		if getResourceErr == nil {
-			return resource, nil
-		} else if !isNeedToRetryOnTaken && getResourceErr != nil {
-			return nil, getResourceErr
-		}
-
-		if getResourceErr != nil && errors.Is(getResourceErr, ErrorPoolLimitReached) {
-			return nil, getResourceErr
-		}
-
-		select {
-		case <-ctx.Done():
-			return nil, ErrorContextCanceled
-		case <-time.After(rpm.retryOnResourceDelay):
-			return rpm.AcquireResource(ctx, isNeedToRetryOnTaken)
-		}
+	case <-time.After(rpm.retryOnResourceDelay):
+		return rpm.AcquireResource(ctx, isNeedToRetryOnTaken)
 	}
 }
 
