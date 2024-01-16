@@ -2,6 +2,8 @@ package pool
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -289,4 +291,57 @@ func TestModifyRetryOnResourceDelay(t *testing.T) {
 
 	manager.SetRetryOnResourceDelay(time.Nanosecond)
 	assert.True(t, manager.GetRetryOnResourceDelay() == time.Nanosecond)
+}
+
+func TestAcquireResourceToContextExpire(t *testing.T) {
+	manager := NewResourcePoolManager[stubResource](1, 1, new(stubFactory))
+	manager.retryOnResourceDelay = time.Nanosecond
+
+	unitContext, unitContextCancel := context.WithTimeout(context.TODO(), time.Millisecond)
+	defer unitContextCancel()
+
+	// All good new resource
+	firstRes, firstResErr := manager.AcquireResource(unitContext, true)
+	assert.NoError(t, firstResErr)
+	assert.NotNil(t, firstRes)
+
+	time.Sleep(time.Microsecond)
+
+	timer := time.NewTimer(time.Millisecond)
+	var finalError error
+
+	for {
+		select {
+		case <-timer.C:
+			assert.True(
+				t,
+				errors.Is(finalError, ErrorContextCanceled),
+				fmt.Sprintf("expected that error will be related to canceled context but given: %s", finalError.Error()),
+			)
+			return
+		default:
+			secondRes, secondResErr := manager.AcquireResource(unitContext, true)
+			assert.NotNil(t, secondResErr)
+			assert.Nil(t, secondRes)
+
+			time.Sleep(time.Microsecond)
+
+			finalError = secondResErr
+		}
+	}
+}
+
+func TestAcquireResourceButLimitReachedError(t *testing.T) {
+	factory := &stubFactory{}
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
+
+	unitContext := context.TODO()
+
+	ackRes, ackErr := manager.AcquireResource(unitContext, false)
+	assert.Nil(t, ackErr)
+	assert.NotNil(t, ackRes)
+
+	ackRes, ackErr = manager.AcquireResource(unitContext, false)
+	assert.Nil(t, ackRes)
+	assert.ErrorIs(t, ackErr, ErrorPoolLimitReached)
 }
