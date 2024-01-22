@@ -27,6 +27,22 @@ type (
 		Construct() *T
 	}
 
+	// ResourcePool functionality.
+	ResourcePool[T Resource] interface {
+		// AcquireResource retrieves an available resource from the pool.
+		AcquireResource(ctx context.Context, isNeedToRetryOnTaken bool) (*T, error)
+		// ReleaseResource releases a given resource back to the pool.
+		ReleaseResource(releasedResource *T)
+		// DetachResource will move out current resources from the management of ResourcePool.
+		DetachResource(resource *T)
+		// AcquireAndReleaseResource allows to execute action with needed Resource -> T.
+		AcquireAndReleaseResource(ctx context.Context, action func(resource *T) error) error
+		// GetRetryOnResourceDelay returns the delay duration before the next retry attempt.
+		GetRetryOnResourceDelay() time.Duration
+		// SetRetryOnResourceDelay configures the delay duration for subsequent retry attempts.
+		SetRetryOnResourceDelay(retryOnResourceDelay time.Duration)
+	}
+
 	// managedResource is a struct that represents a resource managed within the ResourcePoolManager.
 	// It contains a flags for resource being acquired and usage count along with the resource itself.
 	managedResource[T Resource] struct {
@@ -157,6 +173,20 @@ func (rpm *ResourcePoolManager[T]) ReleaseResource(releasedResource *T) {
 	}
 
 	managedResource.mu.Unlock()
+}
+
+// DetachResource will move out current resources from the management of ResourcePool.
+func (rpm *ResourcePoolManager[T]) DetachResource(resource *T) {
+	r, ok := rpm.pool.Load(resource)
+	if !ok { // Not found, already not managed / deleted from pool
+		return
+	}
+
+	managedResource, _ := r.(*managedResource[T]) //nolint:errcheck // value is already found by key, and it's strictly controlled how it's stored.
+	managedResource.mu.Lock()
+	defer managedResource.mu.Unlock()
+
+	rpm.pool.Delete(resource)
 }
 
 // AcquireAndReleaseResource allows to execute action with needed Resource -> T.

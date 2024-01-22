@@ -345,3 +345,28 @@ func TestAcquireResourceButLimitReachedError(t *testing.T) {
 	assert.Nil(t, ackRes)
 	assert.ErrorIs(t, ackErr, ErrorPoolLimitReached)
 }
+
+func TestDetachResource(t *testing.T) {
+	factory := &stubFactory{}
+	manager := NewResourcePoolManager[stubResource](1, 0, factory)
+
+	unitContext := context.TODO()
+
+	initRes, ackErr := manager.AcquireResource(unitContext, false)
+	assert.Nil(t, ackErr)
+	assert.NotNil(t, initRes)
+	initRes.SomeValue = "Initial resource"
+
+	manager.DetachResource(initRes)
+	_, ok := manager.pool.Load(initRes)
+	assert.False(t, ok, "Expected that resource is already deleted from pool")
+	manager.DetachResource(initRes) // No panic on already deleted
+
+	newRes, ackErr := manager.AcquireResource(unitContext, false)
+	assert.Nil(t, ackErr)
+	assert.NotNil(t, newRes)
+	newRes.SomeValue = "Will be new resource"
+
+	assert.NotSame(t, initRes, newRes, "Expected that resource will be not same")
+	assert.NotEqual(t, initRes.SomeValue, newRes.SomeValue)
+}
