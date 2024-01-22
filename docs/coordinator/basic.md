@@ -33,19 +33,5 @@ func main() {
     fmt.Printf("unable to start my application: %v", err)
     os.Exit(1)
   }
-
-  // Handle OS signals to gracefully shut down processes.
-  onShutdownSignalError := func(err error) {
-    // Check the returned error channel from HandleSignals and act accordingly.
-    // Do something else if you need if gracefully shutdown failed.
-
-    if err != nil {
-      fmt.Printf("failed gracefully stop application: %v", err)
-      os.Exit(1)
-    }
-  }
-
-  // Delegate your callback to handle errors on shutdown.
-  sc.HandleShutdownSignals(onShutdownSignalError)
 }
 ```
