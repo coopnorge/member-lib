@@ -12,14 +12,21 @@ import (
 )
 
 type stubResource struct {
-	SomeWork  bool
-	SomeValue string
+	SomeWork           bool
+	SomeValue          string
+	someExternalObject context.Context
 }
 
 type stubFactory struct{}
 
 func (m *stubFactory) Construct() *stubResource {
-	return &stubResource{SomeValue: "NewOne"}
+	return &stubResource{SomeValue: "NewOne", someExternalObject: context.TODO()}
+}
+
+func (m *stubFactory) Deconstruction(r *stubResource) {
+	r.SomeWork = false
+	r.SomeValue = ""
+	r.someExternalObject = nil
 }
 
 // Test creation and manipulation of resources
@@ -369,4 +376,59 @@ func TestDetachResource(t *testing.T) {
 
 	assert.NotSame(t, initRes, newRes, "Expected that resource will be not same")
 	assert.NotEqual(t, initRes.SomeValue, newRes.SomeValue)
+}
+
+func TestResourceDeconstruction(t *testing.T) {
+	factory := &stubFactory{}
+	manager := NewResourcePoolManager[stubResource](1, 1, factory)
+	unitContext := context.TODO()
+
+	initRes, ackErr := manager.AcquireResource(unitContext, false)
+	assert.Nil(t, ackErr)
+	assert.NotNil(t, initRes)
+	initRes.SomeValue = "Initial resource"
+
+	manager.ReleaseResource(initRes)
+
+	newRes, ackErr := manager.AcquireResource(unitContext, false)
+	assert.Nil(t, ackErr)
+	assert.NotNil(t, newRes)
+
+	assert.False(t, initRes.SomeWork, "expected to be changed after deconstruction")
+	assert.True(t, initRes.SomeValue == "", "expected to be changed after deconstruction")
+
+	var storedManagedResource *managedResource[Resource]
+	manager.pool.Range(func(_, value any) bool {
+		mr, ok := value.(*managedResource[Resource])
+		if !ok {
+			return false
+		}
+
+		storedManagedResource = mr
+
+		return true
+	})
+
+	assert.Nil(t, storedManagedResource, "expected to be nil, resource must be deleted from pool after deconstruction when limit of usages was used")
+}
+
+func TestFactoryToConstructAndDeconstructResources(t *testing.T) {
+	holdResources := make([]*stubResource, 0, 6)
+
+	factory := &stubFactory{}
+	manager := NewResourcePoolManager[stubResource](1, 1, factory)
+	unitContext := context.TODO()
+
+	for i := 0; i < 6; i++ {
+		initRes, ackErr := manager.AcquireResource(unitContext, false)
+		assert.Nil(t, ackErr)
+		assert.NotNil(t, initRes)
+
+		holdResources = append(holdResources, initRes)
+		manager.ReleaseResource(initRes)
+	}
+
+	for _, resource := range holdResources {
+		assert.Nil(t, resource.someExternalObject, "expected to be destroyed all external resources")
+	}
 }

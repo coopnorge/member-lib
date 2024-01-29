@@ -22,9 +22,12 @@ type (
 		any
 	}
 
-	// ResourceFactory used to construct new Resource's in ResourcePoolManager and monitor their usage.
-	ResourceFactory[T Resource] interface {
+	// ResourceBuilder used to construct new Resource's in ResourcePoolManager or destroy them.
+	ResourceBuilder[T Resource] interface {
+		// Construct will be called to create new instance of Resource.
 		Construct() *T
+		// Deconstruction will ber called when ResourcePool will need gracefully destroy/clean object.
+		Deconstruction(*T)
 	}
 
 	// ResourcePool functionality.
@@ -55,7 +58,7 @@ type (
 	// ResourcePoolManager represents a pool of resources with encapsulated logic.
 	// It controls pool behavior and attributes such as maximum pool size and resource usage limit.
 	ResourcePoolManager[T Resource] struct {
-		factory            ResourceFactory[T]
+		factory            ResourceBuilder[T]
 		pool               sync.Map
 		maxPoolSize        uint8
 		resourceUsageLimit uint8
@@ -69,11 +72,11 @@ type (
 // It accepts three parameters:
 //   - poolSize: a uint8 representing the maximum size of the pool. This limits the number of resources that can be managed by the pool.
 //   - resourceUsageLimit: a uint8 representing the usage limit for each resource in the pool. Setting this to '0' indicates there is no usage limit.
-//   - resourceFactory: a function of type ResourceFactory[T], which the ResourcePoolManager uses to create new resources if there are none available in the pool.
+//   - resourceFactory: a function of type ResourceBuilder[T], which the ResourcePoolManager uses to create new resources if there are none available in the pool.
 //
 // The purpose of the ResourcePoolManager is to manage a pool of resources, ensuring there are always resources available up to the maximum pool size.
 // Each resource can be used multiple times, controlled by the resourceUsageLimit, before being discarded or renewed.
-func NewResourcePoolManager[T Resource](poolSize, resourceUsageLimit uint8, resourceFactory ResourceFactory[T]) *ResourcePoolManager[T] {
+func NewResourcePoolManager[T Resource](poolSize, resourceUsageLimit uint8, resourceFactory ResourceBuilder[T]) *ResourcePoolManager[T] {
 	return &ResourcePoolManager[T]{
 		factory:              resourceFactory,
 		resourceUsageLimit:   resourceUsageLimit,
@@ -169,7 +172,7 @@ func (rpm *ResourcePoolManager[T]) ReleaseResource(releasedResource *T) {
 		managedResource.isAcquired = false
 		rpm.pool.Store(releasedResource, managedResource)
 	} else {
-		rpm.pool.Delete(releasedResource)
+		rpm.destroyManagedResource(releasedResource)
 	}
 
 	managedResource.mu.Unlock()
@@ -204,6 +207,11 @@ func (rpm *ResourcePoolManager[T]) createManagedResource() *managedResource[T] {
 	return &managedResource[T]{
 		resource: rpm.factory.Construct(),
 	}
+}
+
+func (rpm *ResourcePoolManager[T]) destroyManagedResource(releasedResource *T) {
+	rpm.pool.Delete(releasedResource)
+	rpm.factory.Deconstruction(releasedResource)
 }
 
 func (rpm *ResourcePoolManager[T]) verifyCurrentPoolSize() error {
