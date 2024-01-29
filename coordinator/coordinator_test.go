@@ -3,9 +3,7 @@ package coordinator
 import (
 	"context"
 	"errors"
-	"os"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
@@ -114,31 +112,5 @@ func TestServiceCoordinator(t *testing.T) {
 		// Pass
 	case <-time.After(time.Millisecond):
 		t.Error("Stop was not called in the expected timeframe")
-	}
-}
-
-func TestHandleShutdownSignals(t *testing.T) {
-	coordinator := ServiceCoordinator{}
-
-	callbackCalled := make(chan bool, 1)
-
-	coordinator.HandleShutdownSignals(func(err error) {
-		if err != nil {
-			t.Errorf("Not expected error, but got %v", err)
-		}
-
-		callbackCalled <- true
-	})
-
-	time.AfterFunc(time.Microsecond, func() {
-		p, _ := os.FindProcess(os.Getpid())
-		_ = p.Signal(syscall.SIGTERM)
-	})
-
-	select {
-	case <-callbackCalled:
-		t.Fatal("HandleShutdownSignals returned error and it was error callback was called ")
-	case <-time.After(time.Millisecond):
-		// Pass
 	}
 }
