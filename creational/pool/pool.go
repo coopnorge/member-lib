@@ -96,6 +96,10 @@ func NewResourcePoolManager[T Resource](poolSize, resourceUsageLimit uint8, reso
 // ResourcePoolManager will try to obtain Resource when it will be available recursively until context.Context will be canceled.
 // If there is no need to re-try, pass `isNeedToRetryOnTaken` as false.
 func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, isNeedToRetryOnTaken bool) (*T, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	obtainedResource := make(chan resourceObtainer[T], 1)
 	go rpm.getResource(obtainedResource)
 

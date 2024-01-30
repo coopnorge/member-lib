@@ -214,9 +214,9 @@ func TestReleaseResourceWithCanceledContext(t *testing.T) {
 	assert.NoError(t, firstResErr)
 	assert.NotNil(t, firstRes)
 
-	unitContextCancel()
-
 	manager.ReleaseResource(firstRes)
+
+	unitContextCancel()
 
 	canceledRes, canceledResErr := manager.AcquireResource(unitContext, false)
 	assert.NotNil(t, canceledResErr)
