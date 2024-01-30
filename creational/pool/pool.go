@@ -55,6 +55,12 @@ type (
 		mu         sync.Mutex
 	}
 
+	// resourceObtainer used to thread safely get/create resources.
+	resourceObtainer[T Resource] struct {
+		resource *T
+		error    error
+	}
+
 	// ResourcePoolManager represents a pool of resources with encapsulated logic.
 	// It controls pool behavior and attributes such as maximum pool size and resource usage limit.
 	ResourcePoolManager[T Resource] struct {
@@ -94,25 +100,28 @@ func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, isNeedTo
 		return nil, ctx.Err()
 	}
 
-	resource, getResourceErr := rpm.getResource()
-	if getResourceErr == nil {
-		return resource, nil
-	} else if !isNeedToRetryOnTaken && getResourceErr != nil {
-		return nil, getResourceErr
-	}
+	obtainedResource := make(chan resourceObtainer[T], 1)
+	go rpm.getResource(obtainedResource)
 
-	// NOTE: Ignore pool limit since retry will handle resource acquiring in recursion.
-	if !errors.Is(getResourceErr, ErrorPoolLimitReached) {
-		return nil, getResourceErr
-	}
-
-	if ctx.Err() != nil {
+	select {
+	case <-ctx.Done():
 		return nil, ctx.Err()
+	case managedResource := <-obtainedResource:
+		if managedResource.error == nil {
+			return managedResource.resource, nil
+		} else if !isNeedToRetryOnTaken && managedResource.error != nil {
+			return nil, managedResource.error
+		}
+
+		// NOTE: Ignore pool limit since retry will handle resource acquiring in recursion.
+		if !errors.Is(managedResource.error, ErrorPoolLimitReached) {
+			return nil, managedResource.error
+		}
 	}
 
 	select {
 	case <-ctx.Done():
-		return nil, ErrorContextCanceled
+		return nil, ctx.Err()
 	case <-time.After(rpm.retryOnResourceDelay):
 		return rpm.AcquireResource(ctx, isNeedToRetryOnTaken)
 	}
@@ -120,9 +129,8 @@ func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, isNeedTo
 
 // getResource if no resource is available, a new one is created using the provided factory method.
 // Acquisition of resources is thread-safe.
-func (rpm *ResourcePoolManager[T]) getResource() (*T, error) {
+func (rpm *ResourcePoolManager[T]) getResource(resourceObtained chan<- resourceObtainer[T]) {
 	var acqManagedResource *managedResource[T]
-
 	rpm.pool.Range(func(_, value any) bool {
 		mr, ok := value.(*managedResource[T])
 		if !ok {
@@ -143,18 +151,20 @@ func (rpm *ResourcePoolManager[T]) getResource() (*T, error) {
 
 	if acqManagedResource == nil {
 		if err := rpm.verifyCurrentPoolSize(); err != nil {
-			return nil, err
+			resourceObtained <- resourceObtainer[T]{error: err}
+			return
 		}
 		acqManagedResource = rpm.createManagedResource()
 	}
 
 	acqManagedResource.mu.Lock()
+	defer acqManagedResource.mu.Unlock()
+
 	acqManagedResource.usageCount++
 	acqManagedResource.isAcquired = true
-	acqManagedResource.mu.Unlock()
 	rpm.pool.Store(acqManagedResource.resource, acqManagedResource)
 
-	return acqManagedResource.resource, nil
+	resourceObtained <- resourceObtainer[T]{resource: acqManagedResource.resource}
 }
 
 // ReleaseResource releases a given resource back to the pool.

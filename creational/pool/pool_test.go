@@ -11,24 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type stubResource struct {
-	SomeWork           bool
-	SomeValue          string
-	someExternalObject context.Context
-}
-
-type stubFactory struct{}
-
-func (m *stubFactory) Construct() *stubResource {
-	return &stubResource{SomeValue: "NewOne", someExternalObject: context.TODO()}
-}
-
-func (m *stubFactory) Deconstruction(r *stubResource) {
-	r.SomeWork = false
-	r.SomeValue = ""
-	r.someExternalObject = nil
-}
-
 // Test creation and manipulation of resources
 func TestCreateAndManipulateResources(t *testing.T) {
 	factory := &stubFactory{}
@@ -232,9 +214,9 @@ func TestReleaseResourceWithCanceledContext(t *testing.T) {
 	assert.NoError(t, firstResErr)
 	assert.NotNil(t, firstRes)
 
-	unitContextCancel()
-
 	manager.ReleaseResource(firstRes)
+
+	unitContextCancel()
 
 	canceledRes, canceledResErr := manager.AcquireResource(unitContext, false)
 	assert.NotNil(t, canceledResErr)
@@ -432,3 +414,44 @@ func TestFactoryToConstructAndDeconstructResources(t *testing.T) {
 		assert.Nil(t, resource.someExternalObject, "expected to be destroyed all external resources")
 	}
 }
+
+func TestTryCatchGetResourceWhenContextWasCanceledAfterMutex(t *testing.T) {
+	factory := &stubLockingFactory{}
+
+	manager := NewResourcePoolManager[stubLockingFactory](1, 5, factory)
+	unitContext, unitContextCancel := context.WithTimeout(context.TODO(), time.Millisecond)
+	defer unitContextCancel()
+
+	res, resErr := manager.AcquireResource(unitContext, false)
+	assert.Nil(t, res)
+	assert.NotNil(t, resErr)
+	assert.ErrorIs(t, resErr, context.DeadlineExceeded)
+}
+
+type stubResource struct {
+	SomeWork           bool
+	SomeValue          string
+	someExternalObject context.Context
+}
+
+type stubFactory struct{}
+
+func (m *stubFactory) Construct() *stubResource {
+	return &stubResource{SomeValue: "NewOne", someExternalObject: context.TODO()}
+}
+
+func (m *stubFactory) Deconstruction(r *stubResource) {
+	r.SomeWork = false
+	r.SomeValue = ""
+	r.someExternalObject = nil
+}
+
+type stubLockingFactory struct{}
+
+func (m *stubLockingFactory) Construct() *stubLockingFactory {
+	time.Sleep(time.Hour)
+
+	return new(stubLockingFactory)
+}
+
+func (m *stubLockingFactory) Deconstruction(_ *stubLockingFactory) {}
