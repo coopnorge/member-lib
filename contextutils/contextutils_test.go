@@ -46,7 +46,6 @@ func TestGetKeyValueFromCtx(t *testing.T) {
 			assert.Equal(t, v, "")
 		}
 	}
-
 }
 
 func TestRemoveKeyFromCtx(t *testing.T) {
