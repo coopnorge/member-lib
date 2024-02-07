@@ -12,9 +12,10 @@ func AddKeyValue(ctx context.Context, key, value any) context.Context {
 
 // GetKeyValue retrieves the value of a specific key in the context.
 func GetKeyValue[K any, T any](ctx context.Context, key K) (T, error) {
+	var zeroValue T
 	v := ctx.Value(key)
 	if v == nil {
-		return v.(T), fmt.Errorf("value with key '%v' not found", key)
+		return zeroValue, fmt.Errorf("value with key '%v' not found", key)
 	}
 
 	return v.(T), nil
