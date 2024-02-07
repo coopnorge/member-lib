@@ -21,10 +21,31 @@ func TestGetKeyValueFromCtx(t *testing.T) {
 	ctx := context.Background()
 	ctxWithValue := context.WithValue(ctx, stubContextKey{}, "ctxValue")
 
-	v, err := GetKeyValue[stubContextKey, string](ctxWithValue, stubContextKey{})
+	var testCases = []struct {
+		description  string
+		isSuccessful bool
+	}{
+		{
+			description:  "should return an error because key is not found",
+			isSuccessful: false,
+		},
+		{
+			description:  "should return no error because key is found",
+			isSuccessful: true,
+		},
+	}
 
-	assert.Nil(t, err)
-	assert.Equal(t, v, "ctxValue")
+	for _, testCase := range testCases {
+		if testCase.isSuccessful {
+			v, err := GetKeyValue[stubContextKey, string](ctxWithValue, stubContextKey{})
+			assert.Nil(t, err)
+			assert.Equal(t, v, "ctxValue")
+		} else {
+			v, err := GetKeyValue[stubContextKey, string](ctx, stubContextKey{})
+			assert.NotNil(t, err)
+			assert.Equal(t, v, "")
+		}
+	}
 }
 
 func TestRemoveKeyFromCtx(t *testing.T) {
