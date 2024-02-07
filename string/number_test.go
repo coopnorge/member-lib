@@ -94,3 +94,32 @@ func runTestCase[T WholeNumber](tc wholeNumberTestCase, t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkProcessData(b *testing.B) {
+	testCases := []struct {
+		name  string
+		input string
+	}{
+		{"ShortString", "123"},
+		{"MediumString", "12345"},
+		{"LongString", "1234567890"},
+		{"NegativeNumber", "-12345"},
+		{"LeadingZeros", "000012345"},
+		{"MaxInt", "2147483647"},
+		{"BeyondMaxInt", "2147483648"},
+		{"NegativeInt", "-552183648"},
+		{"LargeUint64", "18446744073709551615"},
+		{"Zero", "0"},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err := ToWholeNumber[uint64](tc.input)
+				if err != nil {
+					b.Fatal("Benchmark failed with error:", err)
+				}
+			}
+		})
+	}
+}

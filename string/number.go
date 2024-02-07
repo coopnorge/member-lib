@@ -24,25 +24,9 @@ func ToWholeNumber[T WholeNumber](str string) (T, error) {
 		return 0, fmt.Errorf(errTmpl, "unable define bit size for number parsing")
 	}
 
-	// Try parse int first, if negative or within range of int
-	isNegativeInt := strings.HasPrefix(str, "-")
-	maxIntStr := strconv.FormatInt(math.MaxInt64, 10)
-	if isNegativeInt || len(str) <= len(maxIntStr) {
-		if pInt, pIntErr := strconv.ParseInt(str, 10, maxBitSize); pIntErr == nil {
-			result = T(pInt)
-			isWithErr = false
-		}
-	}
-
-	// Try work with uints
+	result = parseInt[T](&str, &maxBitSize, &isWithErr)
 	if result == 0 && isWithErr {
-		maxUintStr := strconv.FormatUint(math.MaxUint64, 10)
-		if len(str) <= len(maxUintStr) {
-			if pUint, pUintErr := strconv.ParseUint(str, 10, maxBitSize); pUintErr == nil {
-				result = T(pUint)
-				isWithErr = false
-			}
-		}
+		result = parseUint[T](&str, &maxBitSize, &isWithErr)
 	}
 
 	if isWithErr {
@@ -50,6 +34,29 @@ func ToWholeNumber[T WholeNumber](str string) (T, error) {
 	}
 
 	return result, nil
+}
+
+func parseInt[T WholeNumber](str *string, maxBitSize *int, isWithErr *bool) (result T) {
+	isNegativeInt := strings.HasPrefix(*str, "-")
+	maxIntStr := strconv.FormatInt(math.MaxInt64, 10)
+	if isNegativeInt || len(*str) <= len(maxIntStr) {
+		if pInt, pIntErr := strconv.ParseInt(*str, 10, *maxBitSize); pIntErr == nil {
+			result = T(pInt)
+			*isWithErr = false
+		}
+	}
+	return result
+}
+
+func parseUint[T WholeNumber](str *string, maxBitSize *int, isWithErr *bool) (result T) {
+	maxUintStr := strconv.FormatUint(math.MaxUint64, 10)
+	if len(*str) <= len(maxUintStr) {
+		if pUint, pUintErr := strconv.ParseUint(*str, 10, *maxBitSize); pUintErr == nil {
+			result = T(pUint)
+			*isWithErr = false
+		}
+	}
+	return result
 }
 
 func defineMaxIntType(number any) (maxBitSize int, err error) {
