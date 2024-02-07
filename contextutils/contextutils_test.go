@@ -18,9 +18,6 @@ func TestAddKeyValueToCtx(t *testing.T) {
 }
 
 func TestGetKeyValueFromCtx(t *testing.T) {
-	ctx := context.Background()
-	ctxWithValue := context.WithValue(ctx, stubContextKey{}, "ctxValue")
-
 	var testCases = []struct {
 		description  string
 		isSuccessful bool
@@ -36,6 +33,9 @@ func TestGetKeyValueFromCtx(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
+		ctx := context.Background()
+		ctxWithValue := context.WithValue(ctx, stubContextKey{}, "ctxValue")
+
 		if testCase.isSuccessful {
 			v, err := GetKeyValue[stubContextKey, string](ctxWithValue, stubContextKey{})
 			assert.Nil(t, err)
