@@ -36,15 +36,17 @@ func TestGetKeyValueFromCtx(t *testing.T) {
 		ctx := context.Background()
 		ctxWithValue := context.WithValue(ctx, stubContextKey{}, "ctxValue")
 
-		if testCase.isSuccessful {
-			v, err := GetKeyValue[stubContextKey, string](ctxWithValue, stubContextKey{})
-			assert.Nil(t, err)
-			assert.Equal(t, v, "ctxValue")
-		} else {
-			v, err := GetKeyValue[stubContextKey, string](ctx, stubContextKey{})
-			assert.NotNil(t, err)
-			assert.Equal(t, v, "")
-		}
+		t.Run(testCase.description, func(t *testing.T) {
+			if testCase.isSuccessful {
+				v, err := GetKeyValue[stubContextKey, string](ctxWithValue, stubContextKey{})
+				assert.Nil(t, err)
+				assert.Equal(t, v, "ctxValue")
+			} else {
+				v, err := GetKeyValue[stubContextKey, string](ctx, stubContextKey{})
+				assert.NotNil(t, err)
+				assert.Equal(t, v, "")
+			}
+		})
 	}
 }
 
