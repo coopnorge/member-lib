@@ -1,4 +1,4 @@
-package strconvex
+package strconv
 
 import (
 	"fmt"
