@@ -14,7 +14,7 @@ package main
 import (
   "fmt"
 
-  "github.com/coopnorge/member-lib/string"
+  "github.com/coopnorge/member-lib/strconvex"
 )
 
 func main() {
