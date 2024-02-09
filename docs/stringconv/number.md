@@ -14,12 +14,12 @@ package main
 import (
   "fmt"
 
-  "github.com/coopnorge/member-lib/strconv"
+  "github.com/coopnorge/member-lib/stringconv"
 )
 
 func main() {
   given := "-32767"
-  parsed, parserErr := strconv.ToWholeNumber[int8](given)
+  parsed, parserErr := stringconv.ToWholeNumber[int8](given)
   if parserErr != nil {
     // TODO Deal with that
   } else {
