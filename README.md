@@ -36,7 +36,7 @@ func YourCode() {
 
 Technical documentation stored in `docs`, each sub folder represents golang
 component.
-To check how technical documentation loos like before merging it, you can run
+To check how technical documentation loose like before merging it, you can run
 it in docker.
 
 ```shell
