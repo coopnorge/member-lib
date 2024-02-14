@@ -80,7 +80,7 @@ func NewServiceCoordinator(opts ...Options) (b *ServiceCoordinator) {
 	return
 }
 
-// Start initializes and runs the ServiceCoordinator's main loop.
+// Start initializes and runs the ServiceCoordinator's main loop
 // It launches the goroutines / processes and monitors for interrupt signals.
 func (c *ServiceCoordinator) Start() error {
 	// The WaitGroup helps to synchronize sub goroutines / processes, ensuring
@@ -101,7 +101,7 @@ func (c *ServiceCoordinator) Start() error {
 
 			newUUID, errNewUUID := uuid.NewUUID()
 			if errNewUUID != nil {
-				return fmt.Errorf("unable to generate UUID for process, err: %v", errNewUUID)
+				return fmt.Errorf("unable to generate UUID for process, err: %w", errNewUUID)
 			}
 
 			procStopCtx, procStopCtxCancel := context.WithTimeout(
