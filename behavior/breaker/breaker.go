@@ -22,7 +22,7 @@ type Action func() (any, error)
 // MaxFailuresThreshold Maximum number of failures allowed.
 //
 // ResetTimeout in seconds, is the period of the open state. After which the state of the CircuitBreaker becomes half-open.
-// fields can be used for example as ENV variables in your project like MY_APP_CB_MAX_FAILURES_THRESHOLD:"3"
+// fields can be used for example as ENV variables in your project like MY_APP_CB_MAX_FAILURES_THRESHOLD:"3".
 type Configuration struct {
 	MaxFailuresThreshold string `json:"cb_max_failures_threshold,omitempty"`
 	ResetTimeout         string `json:"cb_reset_timeout,omitempty"`
