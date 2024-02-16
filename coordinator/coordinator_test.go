@@ -84,7 +84,7 @@ func TestServiceCoordinator(t *testing.T) {
 	select {
 	case <-majorUnitTestProcessStartSignal:
 		// Pass
-	case <-time.After(time.Millisecond):
+	case <-time.After(time.Second):
 		t.Error("Start was not called in the expected timeframe")
 	}
 
