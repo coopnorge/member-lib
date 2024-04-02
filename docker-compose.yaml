@@ -3,7 +3,7 @@ version: "3.7"
 services:
   golang-devtools:
     build:
-      context: docker-compose
+      context: devtools
       target: golang-devtools
       dockerfile: Dockerfile
     privileged: true
@@ -21,7 +21,7 @@ services:
 
   techdocs:
     build:
-      context: docker-compose
+      context: devtools
       dockerfile: Dockerfile
       target: techdocs
     working_dir: /srv/workspace
@@ -40,4 +40,5 @@ services:
 
 volumes:
   xdg-cache-home: { }
+  devtools-var: {}
   nothing: { }
