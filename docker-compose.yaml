@@ -7,6 +7,7 @@ services:
       target: golang-devtools
       dockerfile: Dockerfile
     privileged: true
+    command: validate VERBOSE=all
     security_opt:
       - seccomp:unconfined
       - apparmor:unconfined
