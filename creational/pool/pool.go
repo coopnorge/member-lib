@@ -232,7 +232,7 @@ func (rpm *ResourcePoolManager[T]) verifyCurrentPoolSize() error {
 		return nil
 	}
 
-	rpm.pool.Range(func(k, v any) bool {
+	rpm.pool.Range(func(_, _ any) bool {
 		currentPoolSize++
 		return true
 	})
