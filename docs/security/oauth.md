@@ -1,3 +1,4 @@
+<!-- markdownlint-disable-file MD009 -->
 # OAuth
 
 This package contains abstract client that allows work with OAuth 2 to obtain
