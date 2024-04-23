@@ -13,7 +13,7 @@ type ResponseProblemDetails struct {
 
 // ResponseError checks if the response contains an HTTP error and returns a descriptive error.
 func ResponseError(resp *http.Response) error {
-	if resp == nil || resp.Body == nil {
+	if resp == nil {
 		return fmt.Errorf("http error: response not exist")
 	}
 
@@ -21,10 +21,12 @@ func ResponseError(resp *http.Response) error {
 		return nil
 	}
 
-	var pd ResponseProblemDetails
-	if err := json.NewDecoder(resp.Body).Decode(&pd); err == nil {
-		if pd.Detail != "" {
-			return fmt.Errorf("http error: %d %s", resp.StatusCode, pd.Detail)
+	if resp.Body != nil {
+		var pd ResponseProblemDetails
+		if err := json.NewDecoder(resp.Body).Decode(&pd); err == nil {
+			if pd.Detail != "" {
+				return fmt.Errorf("http error: %d %s", resp.StatusCode, pd.Detail)
+			}
 		}
 	}
 
