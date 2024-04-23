@@ -1,4 +1,5 @@
 <!-- markdownlint-disable-file MD009 -->
+<!-- markdownlint-disable-file MD031 -->
 # OpenAPI
 
 Package provides utilities that help work with
