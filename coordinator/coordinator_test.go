@@ -84,7 +84,7 @@ func TestServiceCoordinator(t *testing.T) {
 	select {
 	case <-majorUnitTestProcessStartSignal:
 		// Pass
-	case <-time.After(time.Second):
+	case <-time.After(time.Millisecond):
 		t.Error("Start was not called in the expected timeframe")
 	}
 
@@ -95,7 +95,7 @@ func TestServiceCoordinator(t *testing.T) {
 		// Pass
 	}
 
-	time.Sleep(time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	stopErr := sc.Stop()
 	assert.NoError(t, stopErr, "Expected no error, got %v", stopErr)
