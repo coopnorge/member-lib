@@ -146,7 +146,7 @@ func TestExtractResponseWithError(t *testing.T) {
 	assert.NotNil(t, extractedBadRequest)
 }
 
-func TestExtractResponseJSONDecodeError(t *testing.T) {
+func TestExtractResponseNoHTTPBOdy(t *testing.T) {
 	type TestData struct {
 		Message string `json:"message"`
 	}
@@ -162,9 +162,29 @@ func TestExtractResponseJSONDecodeError(t *testing.T) {
 	}
 
 	_, _, err = ExtractResponse[TestData](&Response{HTTPResponse: resp})
-	if err == nil {
-		t.Errorf("expected an error, got nil")
+	assert.NoError(t, err)
+}
+
+func TestExtractResponseJSONDecodeError(t *testing.T) {
+	type TestData struct {
+		Message string `json:"message"`
 	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "{bad json")
+	}))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatalf("could not create request: %v", err)
+	}
+
+	respBody, bodyReadErr := io.ReadAll(resp.Body)
+	assert.NoError(t, bodyReadErr)
+
+	_, _, err = ExtractResponse[TestData](&Response{HTTPResponse: resp, HTTPResponseBody: &respBody})
+	assert.Error(t, err)
 
 	if err != nil && !strings.Contains(err.Error(), "failed to unmarshal successful response") {
 		t.Errorf("expected JSON unmarshal error, got %q", err.Error())

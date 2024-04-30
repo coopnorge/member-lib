@@ -39,12 +39,16 @@ func ExtractErrorResponse(resp *Response) (errResponse map[string]any, extractEr
 	return
 }
 
-// ExtractResponse extracts the JSON payload from an Response into T if the HTTP status is successful.
+// ExtractResponse extracts the JSON payload from an Response into T if the HTTP status is successful or empty in cases like HTTP 204 No content.
 // Any error response placed as map, or an error if the extraction fails.
 func ExtractResponse[T any](resp *Response) (successResponse *T, errorResponse map[string]any, extractErr error) {
 	errorResponse, extractErr = ExtractErrorResponse(resp)
 	if extractErr != nil {
 		return nil, errorResponse, extractErr
+	}
+
+	if resp.HTTPResponseBody == nil {
+		return
 	}
 
 	if err := json.Unmarshal(*resp.HTTPResponseBody, &successResponse); err != nil {
