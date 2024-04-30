@@ -8,7 +8,7 @@ Package provides utilities that help work with
 ## Example
 
 To simplify response handling and avoid writing logic to parse default
-structure of OpenAPI:
+structure of OpenAPI might look like:
 
 ```go
 type FooBarResponse struct {
@@ -36,16 +36,13 @@ type ContractResponse struct {
 }
 
 func DoingMyJob() {
-  response, responseErr := anotherClient.GetMyContract(ctx, user)
+  response, responseErr := anotherClient.GetMyContract(ctx, user) // Assume that response is FooBarResponse
   if responseErr != nil {
     // TODO I'll handle it
   }
 
-  extractedResponse, extractErr := openapi.ExtractResponse[ContractResponse](response.HTTPResponse)
-  if extractErr != nil {
-    // TODO I'll handle it as well
-  }
-  
-  // contract...
+  extractedResponse, extractedBadRequest, extractErr := openapi.ExtractResponse[ContractResponse](&Response{HTTPResponse: response, HTTPResponseBody: &response.Body})
+  // TODO Handle extractErr
+  // TODO Write code to work with extractedBadRequest or extractedResponse
 }
 ```

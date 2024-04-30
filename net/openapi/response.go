@@ -6,44 +6,54 @@ import (
 	"net/http"
 )
 
-// ResponseProblemDetails generic object that will have details of response.
-type ResponseProblemDetails struct {
-	Detail string `json:"unexpected_response_detail"`
+// Response wraps the HTTP response from an API.
+type Response struct {
+	HTTPResponse     *http.Response // HTTPResponse holds the raw response from the HTTP request.
+	HTTPResponseBody *[]byte        // HTTPResponseBody should be the read and stored response body data.
 }
 
-// ResponseError checks if the response contains an HTTP error and returns a descriptive error.
-func ResponseError(resp *http.Response) error {
+// ExtractErrorResponse extracts error details from Response if the HTTP status code indicates an error.
+// It returns a map of the error details if an error is present, otherwise nil.
+func ExtractErrorResponse(resp *Response) (errResponse map[string]any, extractErr error) {
 	if resp == nil {
-		return fmt.Errorf("http error: response not exist")
+		return nil, fmt.Errorf("http error: response not exist")
 	}
 
-	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
-		return nil
+	if resp.HTTPResponse.StatusCode >= http.StatusOK && resp.HTTPResponse.StatusCode < http.StatusMultipleChoices {
+		return nil, nil
 	}
 
-	if resp.Body != nil {
-		var pd ResponseProblemDetails
-		if err := json.NewDecoder(resp.Body).Decode(&pd); err == nil {
-			if pd.Detail != "" {
-				return fmt.Errorf("http error: %d %s", resp.StatusCode, pd.Detail)
-			}
+	if resp.HTTPResponseBody != nil {
+		errResponse = map[string]any{}
+		if err := json.Unmarshal(*resp.HTTPResponseBody, &errResponse); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal successful response: %w", err)
 		}
 	}
 
-	return fmt.Errorf("http error: %d - unable to parse detailed error message", resp.StatusCode)
+	extractErr = fmt.Errorf(
+		"http response contains not successful response status (%d - %s) no payload details",
+		resp.HTTPResponse.StatusCode,
+		http.StatusText(resp.HTTPResponse.StatusCode),
+	)
+
+	return
 }
 
-// ExtractResponse is a generic function to extract the successful JSON response.
-func ExtractResponse[T any](resp *http.Response) (*T, error) {
-	var respData T
-
-	if err := ResponseError(resp); err != nil {
-		return nil, err
+// ExtractResponse extracts the JSON payload from an Response into T if the HTTP status is successful or empty in cases like HTTP 204 No content.
+// Any error response placed as map, or an error if the extraction fails.
+func ExtractResponse[T any](resp *Response) (successResponse *T, errorResponse map[string]any, extractErr error) {
+	errorResponse, extractErr = ExtractErrorResponse(resp)
+	if extractErr != nil {
+		return nil, errorResponse, extractErr
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal successful response: %w", err)
+	if resp.HTTPResponseBody == nil {
+		return
 	}
 
-	return &respData, nil
+	if err := json.Unmarshal(*resp.HTTPResponseBody, &successResponse); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal successful response: %w", err)
+	}
+
+	return successResponse, nil, nil
 }
