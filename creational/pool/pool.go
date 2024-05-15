@@ -38,6 +38,8 @@ type (
 		ReleaseResource(releasedResource *T)
 		// DetachResource will move out current resources from the management of ResourcePool.
 		DetachResource(resource *T)
+		// CleanUpManagedResources all created resource in ResourcePool.
+		CleanUpManagedResources(ctx context.Context) error
 		// AcquireAndReleaseResource allows to execute action with needed Resource -> T.
 		AcquireAndReleaseResource(ctx context.Context, action func(resource *T) error) error
 		// GetRetryOnResourceDelay returns the delay duration before the next retry attempt.
@@ -200,6 +202,32 @@ func (rpm *ResourcePoolManager[T]) DetachResource(resource *T) {
 	defer managedResource.mu.Unlock()
 
 	rpm.pool.Delete(resource)
+}
+
+// CleanUpManagedResources all created resource in ResourcePool.
+func (rpm *ResourcePoolManager[T]) CleanUpManagedResources(ctx context.Context) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	for i := uint8(0); i < rpm.maxPoolSize; i++ {
+		var acqManagedResource *managedResource[T]
+		rpm.pool.Range(func(_, value any) bool {
+			mr, ok := value.(*managedResource[T])
+			if !ok {
+				return false
+			}
+
+			acqManagedResource = mr
+
+			return true
+		})
+		if acqManagedResource != nil {
+			rpm.destroyManagedResource(acqManagedResource.resource)
+		}
+	}
+
+	return nil
 }
 
 // AcquireAndReleaseResource allows to execute action with needed Resource -> T.

@@ -428,6 +428,47 @@ func TestTryCatchGetResourceWhenContextWasCanceledAfterMutex(t *testing.T) {
 	assert.ErrorIs(t, resErr, context.DeadlineExceeded)
 }
 
+func TestCleanUpManagedResources(t *testing.T) {
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	tests := []struct {
+		name        string
+		ctx         context.Context
+		maxPoolSize uint8
+		expectErr   error
+	}{
+		{
+			name:        "context canceled before operation",
+			ctx:         canceledCtx,
+			maxPoolSize: 5,
+			expectErr:   context.Canceled,
+		},
+		{
+			name:        "normal operation",
+			ctx:         context.Background(),
+			maxPoolSize: 5,
+			expectErr:   nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			factory := &stubFactory{}
+			rpm := NewResourcePoolManager[stubResource](tc.maxPoolSize, 1, factory)
+
+			for i := uint8(0); i < tc.maxPoolSize; i++ {
+				_, _ = rpm.AcquireResource(tc.ctx, false)
+			}
+
+			err := rpm.CleanUpManagedResources(tc.ctx)
+			if tc.expectErr != nil {
+				assert.ErrorIs(t, err, tc.expectErr)
+			}
+		})
+	}
+}
+
 type stubResource struct {
 	SomeWork           bool
 	SomeValue          string
