@@ -2,6 +2,8 @@ package contextext
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -91,4 +93,15 @@ func (cp *ContextExtended[T]) Value(key interface{}) interface{} {
 // Cancel cancels the context.
 func (cp *ContextExtended[T]) Cancel() {
 	cp.cancel()
+}
+
+// SafelyExtractExtendedContextFromInterface by casting interface to extended generic context.
+// T type of values that are stored in context.
+func SafelyExtractExtendedContextFromInterface[T any](ctx context.Context) (*ContextExtended[T], error) {
+	extContext, ok := ctx.(*ContextExtended[T])
+	if !ok {
+		return nil, fmt.Errorf("given context (%v) not a type of %v", reflect.TypeOf(ctx), reflect.TypeOf(ContextExtended[T]{}))
+	}
+
+	return extContext, nil
 }
