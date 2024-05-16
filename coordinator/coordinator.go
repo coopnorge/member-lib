@@ -50,7 +50,9 @@ type (
 	Options func(o *ServiceCoordinator)
 
 	// coreContextKey child context key.
-	contextOfServiceCoordinator interface{}
+	contextOfServiceCoordinator struct {
+		id string
+	}
 )
 
 // SetForceStopTimeout redefines force shutdown timeout.
@@ -104,13 +106,12 @@ func (c *ServiceCoordinator) Start() error {
 				return fmt.Errorf("unable to generate UUID for process, err: %w", errNewUUID)
 			}
 
-			procStopCtx, procStopCtxCancel := context.WithTimeout(
-				c.createChildContext(newUUID.String(), proc.GetName()),
-				c.stopTimeout,
-			)
+			procStopCtx, procStopCtxCancel := context.WithTimeout(context.Background(), c.stopTimeout)
+			procStopCtx = context.WithValue(procStopCtx, contextOfServiceCoordinator{id: newUUID.String()}, proc.GetName())
+
 			defer procStopCtxCancel()
 
-			return proc.OnStop(procStopCtx) //nolint:contextcheck // false positive, extended by c.createChildContext
+			return proc.OnStop(procStopCtx) //nolint:contextcheck // false positive, extended by context.WithValue
 		})
 
 		bgTasksWG.Add(1)
@@ -165,9 +166,4 @@ func (c *ServiceCoordinator) Stop() error {
 	}
 
 	return nil
-}
-
-// createChildContext from parent.
-func (c *ServiceCoordinator) createChildContext(k contextOfServiceCoordinator, v string) context.Context {
-	return context.WithValue(c.mainContext, k, v)
 }
