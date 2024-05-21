@@ -88,5 +88,5 @@ func (tl *TraceLog) Log(sourceCtx context.Context, logSeverity LogAdapterLevel, 
 		maps.Copy(logFieldsToLog, metadata)
 	}
 
-	tl.logAdapter.LogAdaptersWriter(sourceCtx, logSeverity, logMessage, logMeta)
+	tl.logAdapter.LogAdaptersWriter(sourceCtx, logSeverity, logMessage, &logFieldsToLog)
 }
