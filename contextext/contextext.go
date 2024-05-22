@@ -9,10 +9,10 @@ import (
 )
 
 type (
+	contextExtendedKey string
 	// ContextExtended enhances the standard context with additional features.
 	ContextExtended[T any] struct {
-		mu       sync.RWMutex
-		values   map[string]T
+		values   sync.Map
 		ctx      context.Context
 		cancel   context.CancelFunc
 		deadline time.Time
@@ -22,86 +22,98 @@ type (
 // NewContextExtended constructor for ContextExtended with a given original context.
 func NewContextExtended[T any](base context.Context) *ContextExtended[T] {
 	ctx, cancel := context.WithCancel(base)
-	return &ContextExtended[T]{
-		values: make(map[string]T),
-		ctx:    ctx,
-		cancel: cancel,
-	}
+	ctxExt := &ContextExtended[T]{cancel: cancel}
+	ctxExt.ctx = storeContextExtended(ctx, ctxExt)
+
+	return ctxExt
 }
 
 // ExtendTimout extends the context's timeout.
-func (cp *ContextExtended[T]) ExtendTimout(d time.Duration) {
-	cp.mu.Lock()
-	defer cp.mu.Unlock()
-
+func (ce *ContextExtended[T]) ExtendTimout(d time.Duration) {
 	newDeadline := time.Now().Add(d)
-	if cp.deadline.IsZero() || newDeadline.After(cp.deadline) {
-		cp.ctx, cp.cancel = context.WithDeadline(cp.ctx, newDeadline)
-		cp.deadline = newDeadline
+	if ce.deadline.IsZero() || newDeadline.After(ce.deadline) {
+		ce.ctx, ce.cancel = context.WithDeadline(ce.ctx, newDeadline)
+		ce.deadline = newDeadline
 	}
 }
 
 // AddValue safely adds a value to the context.
-func (cp *ContextExtended[T]) AddValue(key string, value T) {
-	cp.mu.Lock()
-	defer cp.mu.Unlock()
-	cp.values[key] = value
+func (ce *ContextExtended[T]) AddValue(key any, value T) {
+	ce.values.Store(key, value)
 }
 
 // GetValue safely retrieves a value from the context.
-func (cp *ContextExtended[T]) GetValue(key string) (T, bool) {
-	cp.mu.RLock()
-	defer cp.mu.RUnlock()
-	value, ok := cp.values[key]
-	return value, ok
+func (ce *ContextExtended[T]) GetValue(key any) (T, bool) {
+	val, ok := ce.values.Load(key)
+	if ok {
+		return val.(T), ok
+	}
+
+	var zero T
+	return zero, false
 }
 
 // RemoveValue safely removes a value from the context.
-func (cp *ContextExtended[T]) RemoveValue(key string) {
-	cp.mu.Lock()
-	defer cp.mu.Unlock()
-	delete(cp.values, key)
+func (ce *ContextExtended[T]) RemoveValue(key any) {
+	ce.values.Delete(key)
 }
 
 // Deadline returns the time when work done on behalf of this context should be canceled.
-func (cp *ContextExtended[T]) Deadline() (deadline time.Time, ok bool) {
-	return cp.ctx.Deadline()
+func (ce *ContextExtended[T]) Deadline() (deadline time.Time, ok bool) {
+	return ce.ctx.Deadline()
 }
 
 // Done returns a channel that's closed when work done on behalf of this context should be canceled.
-func (cp *ContextExtended[T]) Done() <-chan struct{} {
-	return cp.ctx.Done()
+func (ce *ContextExtended[T]) Done() <-chan struct{} {
+	return ce.ctx.Done()
 }
 
 // Err returns a non-nil error value after Done is closed.
-func (cp *ContextExtended[T]) Err() error {
-	return cp.ctx.Err()
+func (ce *ContextExtended[T]) Err() error {
+	return ce.ctx.Err()
 }
 
 // Value returns the value associated with this context for key, or nil if no value is associated with key.
-func (cp *ContextExtended[T]) Value(key interface{}) interface{} {
-	cp.mu.RLock()
-	defer cp.mu.RUnlock()
-	if keyStr, ok := key.(string); ok {
-		if value, exists := cp.values[keyStr]; exists {
-			return value
-		}
+func (ce *ContextExtended[T]) Value(key any) any {
+	// Try access collected values from map in case if direct access to ContextExtended[T].
+	v, exist := ce.GetValue(key)
+	if exist {
+		return v
 	}
-	return cp.ctx.Value(key)
+
+	// Try access to ContextExtended[T] if vanilla context.Context was called.
+	if v := ce.ctx.Value(key); v != nil {
+		return v
+	}
+
+	return nil
 }
 
 // Cancel cancels the context.
-func (cp *ContextExtended[T]) Cancel() {
-	cp.cancel()
+func (ce *ContextExtended[T]) Cancel() {
+	ce.cancel()
 }
 
 // SafelyExtractExtendedContextFromInterface by casting interface to extended generic context.
 // T type of values that are stored in context.
 func SafelyExtractExtendedContextFromInterface[T any](ctx context.Context) (*ContextExtended[T], error) {
-	extContext, ok := ctx.(*ContextExtended[T])
-	if !ok {
-		return nil, fmt.Errorf("given context (%v) not a type of %v", reflect.TypeOf(ctx), reflect.TypeOf(ContextExtended[T]{}))
+	key := getContextExtendedKey[T]()
+	val := ctx.Value(contextExtendedKey(key))
+	if val != nil {
+		if ce, ok := val.(*ContextExtended[T]); ok {
+			return ce, nil
+		}
 	}
 
-	return extContext, nil
+	return nil, fmt.Errorf("given context (%v) not a type of %v", reflect.TypeOf(ctx), reflect.TypeOf(ContextExtended[T]{}))
+}
+
+// getContextExtendedKey generates a unique key for storing ContextExtended in the context.
+func getContextExtendedKey[T any]() string {
+	return reflect.TypeOf((*ContextExtended[T])(nil)).Elem().String()
+}
+
+// StoreContextExtended stores the ContextExtended in the context.
+func storeContextExtended[T any](ctx context.Context, ce *ContextExtended[T]) context.Context {
+	return context.WithValue(ctx, contextExtendedKey(getContextExtendedKey[T]()), ce)
 }
