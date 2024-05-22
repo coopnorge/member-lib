@@ -9,6 +9,7 @@ import (
 )
 
 type (
+	contextExtendedKey string
 	// ContextExtended enhances the standard context with additional features.
 	ContextExtended[T any] struct {
 		values   sync.Map
@@ -97,7 +98,7 @@ func (ce *ContextExtended[T]) Cancel() {
 // T type of values that are stored in context.
 func SafelyExtractExtendedContextFromInterface[T any](ctx context.Context) (*ContextExtended[T], error) {
 	key := getContextExtendedKey[T]()
-	val := ctx.Value(key)
+	val := ctx.Value(contextExtendedKey(key))
 	if val != nil {
 		if ce, ok := val.(*ContextExtended[T]); ok {
 			return ce, nil
@@ -114,5 +115,5 @@ func getContextExtendedKey[T any]() string {
 
 // StoreContextExtended stores the ContextExtended in the context.
 func storeContextExtended[T any](ctx context.Context, ce *ContextExtended[T]) context.Context {
-	return context.WithValue(ctx, getContextExtendedKey[T](), ce)
+	return context.WithValue(ctx, contextExtendedKey(getContextExtendedKey[T]()), ce)
 }
