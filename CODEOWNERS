@@ -1,9 +1,9 @@
-* @coopnorge/member
+* @coopnorge/member-and-partner
 
-Dockerfile @coopnorge/github-review-bots @coopnorge/member
-go.mod @coopnorge/github-review-bots @coopnorge/member
-go.sum @coopnorge/github-review-bots @coopnorge/member
-vendor @coopnorge/github-review-bots @coopnorge/member
+Dockerfile @coopnorge/github-review-bots @coopnorge/member-and-partner
+go.mod @coopnorge/github-review-bots @coopnorge/member-and-partner
+go.sum @coopnorge/github-review-bots @coopnorge/member-and-partner
+vendor @coopnorge/github-review-bots @coopnorge/member-and-partner
 
 /CODEOWNERS @coopnorge/cloud-security
 .github/workflows/security-* @coopnorge/cloud-security
