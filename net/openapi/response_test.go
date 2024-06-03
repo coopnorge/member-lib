@@ -37,19 +37,25 @@ func TestResponseError(t *testing.T) {
 			name:          "Client Error with Message",
 			statusCode:    http.StatusBadRequest,
 			responseBody:  `{"unexpected_response_detail":"invalid input"}`,
-			expectedError: "http response contains not successful response status (400 - Bad Request) no payload details",
+			expectedError: "",
 		},
 		{
 			name:          "Server Error with Message",
 			statusCode:    http.StatusInternalServerError,
 			responseBody:  `{"unexpected_response_detail":"server error"}`,
-			expectedError: "http response contains not successful response status (500 - Internal Server Error) no payload details",
+			expectedError: "",
 		},
 		{
 			name:          "Client Error without Detail",
 			statusCode:    http.StatusBadRequest,
 			responseBody:  `{}`,
-			expectedError: "http response contains not successful response status (400 - Bad Request) no payload details",
+			expectedError: "",
+		},
+		{
+			name:          "Invalid payload json - parsing error",
+			statusCode:    http.StatusNetworkAuthenticationRequired,
+			responseBody:  `{asd,,,,,unit_test_12341`,
+			expectedError: "failed to unmarshal successful response: invalid character 'a' looking for beginning of object key string",
 		},
 	}
 
@@ -69,13 +75,27 @@ func TestResponseError(t *testing.T) {
 			respBody, bodyReadErr := io.ReadAll(resp.Body)
 			assert.NoError(t, bodyReadErr)
 
-			errResp, extractErr := ExtractErrorResponse(&Response{HTTPResponse: resp, HTTPResponseBody: &respBody})
-			if (tt.expectedError == "" && extractErr != nil) || (tt.expectedError != "" && (extractErr == nil || extractErr.Error() != tt.expectedError)) {
-				t.Errorf("expected error %q, got %q", tt.expectedError, extractErr)
-			}
+			badResponse, parserErr := ExtractErrorResponse(&Response{HTTPResponse: resp, HTTPResponseBody: &respBody})
+			if tt.responseBody == "" && tt.expectedError == "" {
+				assert.Nil(t, badResponse)
+				assert.Nil(t, parserErr)
+			} else if tt.expectedError == "" {
+				assert.NotNil(t, badResponse)
 
-			if tt.expectedError != "" {
-				assert.NotNil(t, errResp)
+				// NOTE: Check if required data is added to map
+				isContaining := false
+				for k := range badResponse {
+					if assert.Contains(t, tt.responseBody, k) {
+						isContaining = !isContaining
+					}
+				}
+
+				if tt.responseBody != "{}" { // NOTE: Only if not empty Json
+					assert.True(t, isContaining, "Must contain needed data in bad response data")
+				}
+			} else {
+				assert.NotNil(t, parserErr)
+				assert.True(t, parserErr.Error() == tt.expectedError)
 			}
 		})
 	}
@@ -134,16 +154,8 @@ func TestExtractResponseWithError(t *testing.T) {
 	assert.NoError(t, bodyReadErr)
 
 	_, extractedBadRequest, extractorErr := ExtractResponse[TestData](&Response{HTTPResponse: resp, HTTPResponseBody: &respBody})
-	if extractorErr == nil {
-		t.Errorf("expected an error, got nil")
-	}
-
-	expectedError := "http response contains not successful response status (400 - Bad Request) no payload details"
-	if extractorErr != nil && extractorErr.Error() != expectedError {
-		t.Errorf("expected error %q, got %q", expectedError, extractorErr.Error())
-	}
-
-	assert.NotNil(t, extractedBadRequest)
+	assert.NoError(t, extractorErr, "not expected to have parsing error")
+	assert.NotNil(t, extractedBadRequest, "expected to have bad response after request")
 }
 
 func TestExtractResponseNoHTTPBOdy(t *testing.T) {
@@ -189,4 +201,40 @@ func TestExtractResponseJSONDecodeError(t *testing.T) {
 	if err != nil && !strings.Contains(err.Error(), "failed to unmarshal successful response") {
 		t.Errorf("expected JSON unmarshal error, got %q", err.Error())
 	}
+}
+
+func TestExtractBadRequestResponse(t *testing.T) {
+	type TestData struct {
+		Message string `json:"message"`
+	}
+
+	exampleOfBadResponse := `{"Detail":"The following error response is returned from SapCrm service: Active card 44444444 exists for COOPID 123456789 Membership 1234567890","Instance":null,"Status":424,"Title":"SapCrmException","Type":"https://tools.ietf.org/html/rfc7231#section-6.5"}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusFailedDependency)
+		fmt.Fprintln(w, exampleOfBadResponse)
+	}))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatalf("could not create request: %v", err)
+	}
+
+	respBody, bodyReadErr := io.ReadAll(resp.Body)
+	assert.NoError(t, bodyReadErr)
+
+	okResp, badResponse, parseErr := ExtractResponse[TestData](&Response{HTTPResponse: resp, HTTPResponseBody: &respBody})
+	assert.NoError(t, parseErr)
+	assert.NotNil(t, badResponse)
+	assert.Nil(t, okResp)
+
+	isContainDetails := false
+	for k := range badResponse {
+		isContainDetails = k == "Detail"
+		if isContainDetails {
+			break
+		}
+	}
+
+	assert.True(t, isContainDetails, "expected to be found `Detail` in response body")
 }
