@@ -2,6 +2,7 @@ package contextuallogger
 
 import (
 	"context"
+	"errors"
 	"maps"
 )
 
@@ -38,12 +39,29 @@ type (
 )
 
 const (
-	LogAdapterDebug LogAdapterLevel = iota - 1
-	LogAdapterInfo
-	LogAdapterWarn
-	LogAdapterError
-	LogAdapterFatal
+	LogAdapterFatal LogAdapterLevel = iota // 0
+	LogAdapterError                        // 1
+	LogAdapterWarn                         // 2
+	LogAdapterInfo                         // 3
+	LogAdapterDebug                        // 4
 )
+
+// Map of log level names to LogAdapterLevel values
+var logLevelMap = map[string]LogAdapterLevel{
+	"fatal": LogAdapterFatal,
+	"error": LogAdapterError,
+	"warn":  LogAdapterWarn,
+	"info":  LogAdapterInfo,
+	"debug": LogAdapterDebug,
+}
+
+// Function to convert a string log level to a LogAdapterLevel
+func getLogAdapterLevel(level string) (LogAdapterLevel, error) {
+	if logLevel, exists := logLevelMap[level]; exists {
+		return logLevel, nil
+	}
+	return -1, errors.New("invalid log level")
+}
 
 // LoggerMetadataContextKey that must be utilized for metadata sharing inside context.
 const LoggerMetadataContextKey loggerContextKey = "traceLogMetadataContextKey"
