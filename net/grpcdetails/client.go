@@ -1,3 +1,5 @@
+// Package grpcdetails provides utilities for extracting detailed client information in gRPC contexts.
+// It includes various functions to obtain additional information form gRPC or work with gRPC requests.
 package grpcdetails
 
 import (

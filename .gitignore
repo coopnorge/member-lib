@@ -1,3 +1,7 @@
+# Code development related
+.idea
+.vs
+
 var/
 
 #### vimdiff <(curl --silent -L https://github.com/github/gitignore/raw/master/Go.gitignore) .gitignore

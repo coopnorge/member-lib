@@ -1,3 +1,11 @@
+// Package process is a subpackage of coordinator, providing simple way to create and manage processes such as servers, metrics, and profiling in a clean and controlled manner.
+//
+// This package allows you to focus on the logic for starting and stopping processes
+// within goroutines, while the coordinator handles the application lifecycle.
+//
+// To use this package, implement the Process interface, which includes methods to
+// trigger events like OnStart and OnStop, ensuring integration and control
+// over your application's processes via coordinator.ServiceCoordinator.
 package process
 
 import "context"

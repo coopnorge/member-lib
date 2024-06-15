@@ -1,3 +1,15 @@
+// Package pool or Object Pool design pattern is a way to manage the allocation and reuse of
+// objects, especially when creating new instances of these objects is costly in terms of resources or performance.
+//
+// More about Object pool can be found https://en.wikipedia.org/wiki/Object_pool_pattern in wiki.
+//
+// Possible use cases:
+//   - You might need to have `Connection Management`.
+//     Then you could use this component to balanced workload, reduces the initialisation overhead for
+//     each connection, and improves connection management efficiency.
+//   - `Messages Tracking` - Manager will subsequently handle resource creation and
+//     destruction processes. This use-case improves tracking, prevents message
+//     loss, and ensures effective resource allocation and deallocation.
 package pool
 
 import (

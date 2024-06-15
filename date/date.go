@@ -1,3 +1,7 @@
+// Package date offers features for handling stringified date components,
+// including day, month, and year.
+//
+// It encompasses functions for both formatting and parsing these date components.
 package date
 
 import (
