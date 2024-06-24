@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -90,4 +91,61 @@ func TestAccessTokenDecodeError(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected a JSON decode error, got none")
 	}
+}
+
+// exampleOAuthClient shows how could finally implementation could look like.
+// You could create separate struct per API where you might get Token.
+type exampleOAuthClient struct {
+	*AbstractClient
+}
+
+// AudiencePayload implementation it's what you only need to implement for oauth.AbstractClient.
+func (c *exampleOAuthClient) AudiencePayload() ([]byte, error) {
+	reqBody, marshalErr := json.Marshal(map[string]string{
+		"grant_type":    "client_credentials", // depends on server settings
+		"client_id":     "your_application_id",
+		"client_secret": "your_application_secret",
+		"audience":      "your_audience_of_interest",
+	})
+
+	if marshalErr != nil {
+		return nil, fmt.Errorf("error preparing audience payload: %w", marshalErr)
+	}
+
+	return reqBody, nil
+}
+
+func Example_newOAuthClient() {
+	/*
+		// exampleOAuthClient shows how could finally implementation could look like.
+		// You could create separate struct per API where you might get Token.
+		type exampleOAuthClient struct {
+			*AbstractClient
+		}
+
+		// AudiencePayload implementation it's what you only need to implement for oauth.AbstractClient.
+		func (c *exampleOAuthClient) AudiencePayload() ([]byte, error) {
+			reqBody, marshalErr := json.Marshal(map[string]string{
+				"grant_type":    "client_credentials",         // depends on server settings
+				"client_id":     "your_application_id",        // your client secret
+				"client_secret": "your_application_secret",    // your client secret
+				"audience":      "your_audience_of_interest",  // if needed
+			})
+
+			if marshalErr != nil {
+				return nil, fmt.Errorf("error preparing audience payload: %w", marshalErr)
+			}
+
+			return reqBody, nil
+		}
+	*/
+
+	// Create new instance.
+	client := new(exampleOAuthClient)
+	// Create new abstract client.
+	client.AbstractClient = NewClient(&ClientConfig{AccessTokenURL: "https://login.mydomain.example/oauth/token"})
+	client.AbstractClient.ClientOAuth = client
+
+	// Then just call abstract method `AccessToken()` to get your access token and write needed code to handle it.
+	client.AccessToken() // returns newToken, tokenErr
 }

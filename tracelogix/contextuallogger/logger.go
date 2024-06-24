@@ -1,3 +1,10 @@
+// Package contextuallogger provides a service for collecting and managing contextual information
+// to correlate related logs throughout the lifecycle of a request or operation. This package is
+// designed to be integrated as a service within your application, enabling you to log events
+// with contextual data seamlessly during context passing.
+//
+// The primary goal is to enhance log tracing and debugging by maintaining context-specific data,
+// making it easier to understand the flow and state of an application at various points.
 package contextuallogger
 
 import (

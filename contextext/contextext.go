@@ -1,3 +1,5 @@
+// Package contextext allows to extend existing context with generic support to allow work easier to get values from it.
+// Be careful what you store in the context as it can lead to memory leaks.
 package contextext
 
 import (

@@ -58,3 +58,18 @@ func TestGetMetadataValue(t *testing.T) {
 		t.Errorf("GetMetadataValue() = %v, want empty string", val)
 	}
 }
+
+func Example_unaryServerInterceptor() {
+	/*
+		You can have a middleware where from gRPC request can be extracted client details.
+
+		func (m *MyMiddleware) UnaryServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, nextHandler grpc.UnaryHandler) (resp any, err error) {
+		  cIP := grpcdetails.GetClientAddress(ctx)
+		  cAgent := grpcdetails.GetMetadataValue(ctx, "User-Agent")
+
+		  // another internal code logic to use it...
+
+		  return nextHandler(ctx, req)
+		}
+	*/
+}

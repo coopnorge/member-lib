@@ -3,6 +3,7 @@ package breaker
 import (
 	"errors"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -189,4 +190,33 @@ func TestResetCircuitBreakerState(t *testing.T) {
 	_, rErr = cb.Proceed(action)
 	assert.Nil(t, rErr)
 	assert.True(t, isSuccessAfterReset, "Expected to be true after CircuitBreaker.Reset() and CircuitBreaker.Proceed(action)")
+}
+
+func Example_wrappingExecutionInCircuitBreaker() {
+	cbCfg := &Configuration{
+		MaxFailuresThreshold: "100", // Amount of allowed failures before state will be Open.
+		ResetTimeout:         "1",   // Time duration used to switch state from Open.
+	}
+
+	cb, cbErr := NewCircuitBreaker(cbCfg)
+	if cbErr != nil {
+		// TODO Deal with that
+	}
+
+	var myActionThatINeedExecuteInCircuitBreaker Action
+	myActionThatINeedExecuteInCircuitBreaker = func() (any, error) {
+		return "Hey ho, let's go", nil
+	}
+
+	result, resultErr := cb.Proceed(myActionThatINeedExecuteInCircuitBreaker)
+	if resultErr != nil {
+		// TODO Deal with that again
+	}
+
+	log.Println(result)
+
+	// What if you need check state or reset Circuit Breaker?
+	if cb.GetState().IsState(StateOpen) {
+		cb.Reset() // Ok, now state of Circuit Breaker in initial.
+	}
 }

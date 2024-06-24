@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"testing"
 	"time"
@@ -416,9 +417,9 @@ func TestFactoryToConstructAndDeconstructResources(t *testing.T) {
 }
 
 func TestTryCatchGetResourceWhenContextWasCanceledAfterMutex(t *testing.T) {
-	factory := &stubLockingFactory{}
+	factory := &stubRemoteConnectionFactory{}
 
-	manager := NewResourcePoolManager[stubLockingFactory](1, 5, factory)
+	manager := NewResourcePoolManager[stubRemoteConnectionFactory](1, 5, factory)
 	unitContext, unitContextCancel := context.WithTimeout(context.TODO(), time.Millisecond)
 	defer unitContextCancel()
 
@@ -487,12 +488,63 @@ func (m *stubFactory) Deconstruction(r *stubResource) {
 	r.someExternalObject = nil
 }
 
-type stubLockingFactory struct{}
+type stubRemoteConnectionFactory struct{}
 
-func (m *stubLockingFactory) Construct() *stubLockingFactory {
+func (m *stubRemoteConnectionFactory) Construct() *stubRemoteConnectionFactory {
 	time.Sleep(time.Hour)
 
-	return new(stubLockingFactory)
+	return new(stubRemoteConnectionFactory)
 }
 
-func (m *stubLockingFactory) Deconstruction(_ *stubLockingFactory) {}
+func (m *stubRemoteConnectionFactory) Deconstruction(_ *stubRemoteConnectionFactory) {}
+
+func Example_schematicallyResourcePoolMangerWorks() {
+	/*
+	   ┌─────────────────────────────────────────────┐
+	   │ Your Project Code                           │     ┌──────────────────────────┐
+	   │                                             │     │ Configure                │
+	   │                                             │     │                          │
+	   │   ┌──────────────────┐                      │     │ Pool Size and Usage Count│
+	   │   │DatabasedConnector│                      │     └─────────────┬────────────┘
+	   │   └┬─────────────────┘                      │                   │
+	   │    │                                        │                   │
+	   │   ┌▼──────────────────────────┬┐            │     ┌─────────────▼───────────┐
+	   │   │Database Connection Factory│┼────────────┼─────┤► Resource Pool Manager  │
+	   │   └───────────────────────────┴┘            │     └──────┬┬─────────────────┤
+	   │                                             │            ││                 │
+	   │                                             │            ││                 │
+	   │                                             │ ┌──────────┤►Acquire Resource │
+	   │   ┌──────────────────────────┐              │ │          ││                 │
+	   │   │Repository                │              │ │          ││                 │
+	   │   ├──────────┬┬──────────────┘              │ │       ┌──┤►Release Resource │
+	   │   │ Find User││                             │ │       │  └──────────────────┘
+	   │   └──────┬───┼┘                             │ │       │
+	   │          │   │  1.Ask to get free Connector │ │       │
+	   │          │   └──────────────────────────────┼─┘       │
+	   │          │                                  │         │
+	   │          │      2.Return back Connector     │         │
+	   │          └──────────────────────────────────┼─────────┘
+	   │                                             │
+	   └─────────────────────────────────────────────┘
+	*/
+}
+
+func Example_newResourcePoolManger() {
+	const maxConn uint8 = 5
+	const maxMsgPerConn uint8 = 100
+	isNeededToWaitResource := false
+
+	// NewResourcePoolManager returns a new pool manager that will create and manage resources from stubRemoteConnectionFactory
+	// Internally pool manager will check if resource used 100 times (maxMsgPerConn) and new resources can be produced by maxConn capacity (5).
+	connectionPool := NewResourcePoolManager[stubRemoteConnectionFactory](maxConn, maxMsgPerConn, new(stubRemoteConnectionFactory))
+
+	// Now you can get new or already created resource, if it's needed to wait when it will be available pass true as second arg (isNeededToWaitResource).
+	resource, acquireErr := connectionPool.AcquireResource(context.TODO(), isNeededToWaitResource)
+	if acquireErr != nil {
+		log.Println("Reason...")
+		return
+	}
+
+	// Now we can return resource back to pool so that another part of code could use it.
+	connectionPool.ReleaseResource(resource)
+}

@@ -1,3 +1,4 @@
+// Package oauth provides simple abstract client that allows work with OAuth 2 to obtain Access token.
 package oauth
 
 import (

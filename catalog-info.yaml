@@ -3,7 +3,7 @@ kind: Component
 metadata:
   name: member-lib
   title: "Member Lib"
-  description: "Domain-crafted abstract Go packages for various use cases."
+  description: "Member & Partner Team's Go: Crafted abstract packages for various use cases to enhance productivity and eliminate redundancy."
   tags:
     - "go"
     - "pkg"
@@ -14,7 +14,7 @@ spec:
   profile:
     displayName: "Member Lib"
   type: library
-  lifecycle: experimental
+  lifecycle: production
   owner: member
   dependsOn:
     - component:github-workflow-techdocs

@@ -1,3 +1,4 @@
+// Package openapi provides utilities that help work with responses and generated code of https://swagger.io/specification for APIs.
 package openapi
 
 import (

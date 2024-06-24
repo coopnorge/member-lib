@@ -1,3 +1,12 @@
+// Package breaker implements the Circuit Breaker pattern.
+//
+// This pattern prevents an application from performing operations
+// that are likely to fail, allowing it to maintain high performance
+// and availability even when some parts of a system are not functioning
+// optimally.
+//
+// The breaker package provides a simple yet flexible way to
+// integrate circuit breaking logic into your applications.
 package breaker
 
 import (
