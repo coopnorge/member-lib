@@ -18,3 +18,13 @@ jobs:
         with:
           check_filenames: true
           skip: "./vendor"
+  build:
+    needs:
+      - "codespell"
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 1
+        name: "Catch errors"
+        if: |
+          needs.codespell.result == 'failure'
