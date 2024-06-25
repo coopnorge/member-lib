@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coopnorge/member-lib/stringconv"
+	"github.com/coopnorge/member-lib/pkg/stringconv"
 )
 
 var (

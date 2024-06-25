@@ -1,11 +1,11 @@
-// Package contextuallogger provides a service for collecting and managing contextual information
+// Package tracelogix provides a service for collecting and managing contextual information
 // to correlate related logs throughout the lifecycle of a request or operation. This package is
 // designed to be integrated as a service within your application, enabling you to log events
 // with contextual data seamlessly during context passing.
 //
 // The primary goal is to enhance log tracing and debugging by maintaining context-specific data,
 // making it easier to understand the flow and state of an application at various points.
-package contextuallogger
+package tracelogix
 
 import (
 	"context"
@@ -23,9 +23,9 @@ type (
 
 	// TraceLogService interface.
 	TraceLogService interface {
-		// SetRequestMetadataContext allows preallocate request metadata for TraceLog.
+		// SetContextMetadata allows preallocate request metadata for TraceLog.
 		// Useful to expand log information across application level.
-		SetRequestMetadataContext(reqCtx context.Context, reqLogMetadataFields MetadataFields) context.Context
+		SetContextMetadata(reqCtx context.Context, reqLogMetadataFields MetadataFields) context.Context
 		// Log information with intercepted metadata from request.
 		Log(sourceCtx context.Context, logSeverity LogAdapterLevel, logMessage string, logMeta *MetadataFields)
 	}
@@ -62,7 +62,7 @@ func NewTraceLog(adapter LogAdapter) *TraceLog {
 
 // SetRequestMetadataContext allows preallocate request metadata for TraceLog.
 // Useful to expand log information across application level.
-func (tl *TraceLog) SetRequestMetadataContext(reqCtx context.Context, reqLogMetadataFields MetadataFields) context.Context {
+func (tl *TraceLog) SetContextMetadata(reqCtx context.Context, reqLogMetadataFields MetadataFields) context.Context {
 	metadata, isFoundMetadata := reqCtx.Value(LoggerMetadataContextKey).(MetadataFields)
 	if !isFoundMetadata {
 		return context.WithValue(reqCtx, LoggerMetadataContextKey, reqLogMetadataFields)

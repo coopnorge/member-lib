@@ -1,4 +1,4 @@
-package contextuallogger
+package tracelogix
 
 import (
 	"context"
@@ -42,7 +42,7 @@ func TestSetRequestMetadataContext(t *testing.T) {
 
 	// Validate initial context extend and it's metadata
 	initialFields := MetadataFields{"key1": "value1", "key2": "value2"}
-	ctxWithMetadata := tl.SetRequestMetadataContext(originalCtx, initialFields)
+	ctxWithMetadata := tl.SetContextMetadata(originalCtx, initialFields)
 
 	metadata, isMetadataFound := ctxWithMetadata.Value(LoggerMetadataContextKey).(MetadataFields)
 	assert.True(t, isMetadataFound)
@@ -59,7 +59,7 @@ func TestSetRequestMetadataContext(t *testing.T) {
 
 	// Validate if context metadata must be mutated
 	extendContextLogFields := MetadataFields{"key1": "mutatedValue1", "key3": "value3"}
-	updatedCtxWithMetadata := tl.SetRequestMetadataContext(ctxWithMetadata, extendContextLogFields)
+	updatedCtxWithMetadata := tl.SetContextMetadata(ctxWithMetadata, extendContextLogFields)
 
 	updMetadata, isUPDMetadataFound := updatedCtxWithMetadata.Value(LoggerMetadataContextKey).(MetadataFields)
 	assert.True(t, isUPDMetadataFound)
