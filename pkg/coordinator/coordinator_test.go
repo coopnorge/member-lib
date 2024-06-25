@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coopnorge/member-lib/coordinator/process"
+	"github.com/coopnorge/member-lib/pkg/coordinator/process"
 	"github.com/stretchr/testify/assert"
 )
 
