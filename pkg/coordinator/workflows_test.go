@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// MockWorkflow simulates a workflow with deterministic behavior
+// MockWorkflow simulates a workflow with deterministic behavior.
 type MockWorkflow struct {
 	Name           string
 	SuccessPattern []bool // Determines the success/failure pattern of Execute calls
@@ -16,7 +16,7 @@ type MockWorkflow struct {
 }
 
 func (mw *MockWorkflow) Execute(ctx *WorkflowContext) (bool, error) {
-	// Simulate work
+	// Simulate work.
 	time.Sleep(time.Millisecond * 10)
 
 	if mw.callCount < len(mw.SuccessPattern) && mw.SuccessPattern[mw.callCount] {
