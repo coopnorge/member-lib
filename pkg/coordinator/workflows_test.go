@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -10,88 +11,89 @@ import (
 
 // MockWorkflow simulates a workflow with deterministic behavior.
 type MockWorkflow struct {
-	Name           string
-	SuccessPattern []bool // Determines the success/failure pattern of Execute calls
-	callCount      int    // Tracks the number of Execute calls
+	Name          string
+	StatusPattern []WorkflowStatus // Determines the status pattern of Execute calls
+	callCount     int              // Tracks the number of Execute calls
 }
 
-func (mw *MockWorkflow) Execute(ctx *WorkflowContext) (bool, error) {
+func (mw *MockWorkflow) Execute(config *WorkflowConfig) (WorkflowStatus, error) {
 	// Simulate work.
 	time.Sleep(time.Millisecond * 10)
-
-	if mw.callCount < len(mw.SuccessPattern) && mw.SuccessPattern[mw.callCount] {
+	if mw.callCount < len(mw.StatusPattern) {
+		status := mw.StatusPattern[mw.callCount]
 		mw.callCount++
-		return true, nil
+		if status == WorkflowCompleted {
+			return status, nil
+		}
+		return status, fmt.Errorf("predetermined failure occurred")
 	}
-
 	mw.callCount++
-	return false, fmt.Errorf("predetermined failure occurred")
+	return WorkflowFailed, fmt.Errorf("predetermined failure occurred")
 }
 
-func (mw *MockWorkflow) OnStart(ctx *WorkflowContext) {
+func (mw *MockWorkflow) OnStart(config *WorkflowConfig) {
 	fmt.Printf("Starting workflow: %s\n", mw.Name)
 }
 
-func (mw *MockWorkflow) OnEnd(ctx *WorkflowContext) {
-	fmt.Printf("Ending workflow: %s (Retries: %d)\n", mw.Name, ctx.RetryCount)
+func (mw *MockWorkflow) OnEnd(config *WorkflowConfig, status WorkflowStatus) {
+	fmt.Printf("Ending workflow: %s (Status: %s, Retries: %d)\n", mw.Name, status, config.RetryCount)
 }
 
 func TestWorkflowExecutor(t *testing.T) {
 	tests := []struct {
 		name           string
-		maxRetries     int
+		retry          bool
+		retryCount     uint8
 		retryDelay     time.Duration
-		successPattern []bool
-		expectedResult bool
+		statusPattern  []WorkflowStatus
+		expectedStatus WorkflowStatus
 	}{
 		{
 			name:           "Single attempt, fails",
-			maxRetries:     0,
+			retry:          false,
+			retryCount:     0,
 			retryDelay:     time.Millisecond,
-			successPattern: []bool{false},
-			expectedResult: false,
+			statusPattern:  []WorkflowStatus{WorkflowFailed},
+			expectedStatus: WorkflowFailed,
 		},
 		{
 			name:           "Multiple attempts, succeeds on last try",
-			maxRetries:     2,
+			retry:          true,
+			retryCount:     2,
 			retryDelay:     time.Millisecond,
-			successPattern: []bool{false, false, true},
-			expectedResult: true,
+			statusPattern:  []WorkflowStatus{WorkflowFailed, WorkflowFailed, WorkflowCompleted},
+			expectedStatus: WorkflowCompleted,
 		},
 		{
 			name:           "Multiple attempts, all fail",
-			maxRetries:     2,
+			retry:          true,
+			retryCount:     2,
 			retryDelay:     time.Millisecond,
-			successPattern: []bool{false, false, false},
-			expectedResult: false,
+			statusPattern:  []WorkflowStatus{WorkflowFailed, WorkflowFailed, WorkflowFailed},
+			expectedStatus: WorkflowFailed,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workflow := &MockWorkflow{
-				Name:           tt.name,
-				SuccessPattern: tt.successPattern,
+				Name:          tt.name,
+				StatusPattern: tt.statusPattern,
 			}
-			executor := &WorkflowExecutor{}
-
-			config := WorkflowConfig{
-				MaxRetries: tt.maxRetries,
+			config := &WorkflowConfig{
+				Retry:      tt.retry,
+				RetryCount: tt.retryCount,
 				RetryDelay: tt.retryDelay,
-				Timeout:    time.Second, // Not used in this test
+				Timeout:    nil, // Not used in this test
 			}
-
-			success, err := executor.Execute(workflow, config)
-
-			if tt.expectedResult {
-				assert.True(t, success, "Expected success, but got failure")
+			status, err := config.Execute(context.Background(), workflow)
+			assert.Equal(t, tt.expectedStatus, status, "Unexpected workflow status")
+			if tt.expectedStatus == WorkflowCompleted {
 				assert.NoError(t, err, "Expected no error, but got: %v", err)
 			} else {
-				assert.False(t, success, "Expected failure, but got success")
 				assert.Error(t, err, "Expected an error, but got none")
 			}
-
-			assert.Equal(t, len(tt.successPattern), workflow.callCount, "Unexpected number of Execute calls")
+			assert.Equal(t, len(tt.statusPattern), workflow.callCount, "Unexpected number of Execute calls")
 		})
 	}
 }

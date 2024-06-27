@@ -1,52 +1,88 @@
 package coordinator
 
-import "time"
+import (
+	"context"
+	"time"
+)
+
+type WorkflowStatus int
+
+const (
+	WorkflowNotStarted WorkflowStatus = iota
+	WorkflowRunning
+	WorkflowCompleted
+	WorkflowFailed
+	WorkflowCancelled
+	WorkflowTimedOut
+)
+
+func (s WorkflowStatus) String() string {
+	switch s {
+	case WorkflowNotStarted:
+		return "NotStarted"
+	case WorkflowRunning:
+		return "Running"
+	case WorkflowCompleted:
+		return "Completed"
+	case WorkflowFailed:
+		return "Failed"
+	case WorkflowCancelled:
+		return "Cancelled"
+	case WorkflowTimedOut:
+		return "TimedOut"
+	default:
+		return "Unknown"
+	}
+}
 
 // WorkflowConfig holds configuration options for a workflow.
 type WorkflowConfig struct {
-	MaxRetries int
+	Retry      bool
+	RetryCount uint8
 	RetryDelay time.Duration
-	Timeout    time.Duration
-}
-
-// WorkflowContext holds the current state and configuration of a workflow.
-type WorkflowContext struct {
-	Config     WorkflowConfig
-	RetryCount int
+	Timeout    *time.Duration
 }
 
 // Workflow interface defines the methods a workflow must implement.
 type Workflow interface {
-	Execute(ctx *WorkflowContext) (bool, error)
-	OnStart(ctx *WorkflowContext)
-	OnEnd(ctx *WorkflowContext)
+	Execute(config *WorkflowConfig) (WorkflowStatus, error)
+	OnStart(config *WorkflowConfig)
+	OnEnd(config *WorkflowConfig, status WorkflowStatus)
 }
 
-// WorkflowExecutor handles the execution of workflows.
-type WorkflowExecutor struct{}
+// Execute runs a workflow with the given configuration and context.
+func (config *WorkflowConfig) Execute(ctx context.Context, w Workflow) (WorkflowStatus, error) {
+	w.OnStart(config)
+	defer w.OnEnd(config, WorkflowNotStarted)
 
-// Execute runs a workflow with the given configuration.
-func (we *WorkflowExecutor) Execute(w Workflow, config WorkflowConfig) (bool, error) {
-	ctx := &WorkflowContext{
-		Config: config,
+	var timeoutCtx context.Context
+	var cancel context.CancelFunc
+	if config.Timeout != nil {
+		timeoutCtx, cancel = context.WithTimeout(ctx, *config.Timeout)
+		defer cancel()
+	} else {
+		timeoutCtx = ctx
 	}
 
-	w.OnStart(ctx)
-	defer w.OnEnd(ctx)
-
-	for ctx.RetryCount <= ctx.Config.MaxRetries {
-		success, err := w.Execute(ctx)
-		if success {
-			return true, nil
+	for config.RetryCount < 1 || (config.Retry && config.RetryCount > 0) {
+		status, err := w.Execute(config)
+		if status == WorkflowCompleted {
+			w.OnEnd(config, status)
+			return status, nil
 		}
-
-		if ctx.RetryCount == ctx.Config.MaxRetries {
-			return false, err
+		if !config.Retry || config.RetryCount == 0 {
+			w.OnEnd(config, status)
+			return status, err
 		}
-
-		ctx.RetryCount++
-		time.Sleep(ctx.Config.RetryDelay)
+		config.RetryCount--
+		select {
+		case <-timeoutCtx.Done():
+			w.OnEnd(config, WorkflowTimedOut)
+			return WorkflowTimedOut, timeoutCtx.Err()
+		case <-time.After(config.RetryDelay):
+		}
 	}
 
-	return false, nil
+	w.OnEnd(config, WorkflowFailed)
+	return WorkflowFailed, nil
 }
