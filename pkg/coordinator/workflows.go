@@ -16,8 +16,8 @@ const (
 	WorkflowTimedOut
 )
 
-// WorkflowConfig holds configuration options for a workflow.
-type WorkflowConfig struct {
+// WorkflowRunner holds configuration options for a workflow.
+type WorkflowRunner struct {
 	Retry      bool
 	RetryCount uint8
 	RetryDelay time.Duration
@@ -26,13 +26,13 @@ type WorkflowConfig struct {
 
 // Workflow interface defines the methods a workflow must implement.
 type Workflow interface {
-	Execute(config *WorkflowConfig) (WorkflowStatus, error)
-	OnStart(config *WorkflowConfig)
-	OnEnd(config *WorkflowConfig, status WorkflowStatus)
+	Execute(config *WorkflowRunner) (WorkflowStatus, error)
+	OnStart(config *WorkflowRunner)
+	OnEnd(config *WorkflowRunner, status WorkflowStatus)
 }
 
-// Execute runs a workflow with the given configuration and context.
-func (config *WorkflowConfig) Execute(ctx context.Context, w Workflow) (WorkflowStatus, error) {
+// ExTriggerecute runs a workflow with the given configuration and context.
+func (config *WorkflowRunner) Trigger(ctx context.Context, w Workflow) (WorkflowStatus, error) {
 	w.OnStart(config)
 	status := WorkflowNotStarted
 	defer w.OnEnd(config, status)

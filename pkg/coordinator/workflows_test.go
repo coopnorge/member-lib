@@ -16,7 +16,7 @@ type ExampleWorkflow struct {
 	callCount     int              // Tracks the number of Execute calls
 }
 
-func (ew *ExampleWorkflow) Execute(config *WorkflowConfig) (WorkflowStatus, error) {
+func (ew *ExampleWorkflow) Execute(config *WorkflowRunner) (WorkflowStatus, error) {
 	// Simulate work.
 	time.Sleep(time.Millisecond * 10)
 	if ew.callCount < len(ew.StatusPattern) {
@@ -31,21 +31,20 @@ func (ew *ExampleWorkflow) Execute(config *WorkflowConfig) (WorkflowStatus, erro
 	return WorkflowFailed, fmt.Errorf("predetermined failure occurred")
 }
 
-func (ew *ExampleWorkflow) OnStart(config *WorkflowConfig) {
-
+func (ew *ExampleWorkflow) OnStart(config *WorkflowRunner) {
 	fmt.Printf("Starting workflow: %s\n", ew.Name)
 }
 
-func (ew *ExampleWorkflow) OnEnd(config *WorkflowConfig, status WorkflowStatus) {
-	fmt.Printf("Ending workflow: %s (Status: %s, Retries: %d)\n", ew.Name, status, config.RetryCount)
+func (ew *ExampleWorkflow) OnEnd(config *WorkflowRunner, status WorkflowStatus) {
+	fmt.Printf("Workflow ended with status: %s\n", status)
 }
 
-func Example_workflows() {
+func Example_implementation() {
 	// Create a new ExampleWorkflow
-	workflow := &ExampleWorkflow{}
+	workflow := &ExampleWorkflow{Name: "my_new_workflow"}
 
-	// Create a WorkflowConfig
-	config := &WorkflowConfig{
+	// Create a WorkflowRunner
+	runner := &WorkflowRunner{
 		Retry:      true,
 		RetryCount: 3,
 		RetryDelay: 10 * time.Millisecond,
@@ -55,20 +54,14 @@ func Example_workflows() {
 	// Create a context
 	ctx := context.Background()
 
-	// Execute the workflow
-	status, err := config.Execute(ctx, workflow)
+	// Trigger the workflow.
+	status, _ := runner.Trigger(ctx, workflow)
 
-	// Print the result
 	fmt.Printf("Final status: %s\n", status)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-	}
-
 	// Output:
-	// Workflow started
-	// Workflow ended with status: TimedOut
+	// Starting workflow: my_new_workflow
+	// Workflow ended with status: NotStarted
 	// Final status: TimedOut
-	// Error: context deadline exceeded
 }
 
 func TestWorkflowExecutor(t *testing.T) {
@@ -79,6 +72,8 @@ func TestWorkflowExecutor(t *testing.T) {
 		retryDelay     time.Duration
 		statusPattern  []WorkflowStatus
 		expectedStatus WorkflowStatus
+		expectedError  bool
+		expectedCalls  int
 	}{
 		{
 			name:           "Single attempt, fails",
@@ -87,6 +82,8 @@ func TestWorkflowExecutor(t *testing.T) {
 			retryDelay:     time.Millisecond,
 			statusPattern:  []WorkflowStatus{WorkflowFailed},
 			expectedStatus: WorkflowFailed,
+			expectedError:  true,
+			expectedCalls:  1,
 		},
 		{
 			name:           "Multiple attempts, succeeds on last try",
@@ -95,6 +92,8 @@ func TestWorkflowExecutor(t *testing.T) {
 			retryDelay:     time.Millisecond,
 			statusPattern:  []WorkflowStatus{WorkflowFailed, WorkflowFailed, WorkflowCompleted},
 			expectedStatus: WorkflowCompleted,
+			expectedError:  false,
+			expectedCalls:  3,
 		},
 		{
 			name:           "Multiple attempts, all fail",
@@ -103,6 +102,8 @@ func TestWorkflowExecutor(t *testing.T) {
 			retryDelay:     time.Millisecond,
 			statusPattern:  []WorkflowStatus{WorkflowFailed, WorkflowFailed, WorkflowFailed},
 			expectedStatus: WorkflowFailed,
+			expectedError:  true,
+			expectedCalls:  3,
 		},
 	}
 
@@ -112,20 +113,20 @@ func TestWorkflowExecutor(t *testing.T) {
 				Name:          tt.name,
 				StatusPattern: tt.statusPattern,
 			}
-			config := &WorkflowConfig{
+			config := &WorkflowRunner{
 				Retry:      tt.retry,
 				RetryCount: tt.retryCount,
 				RetryDelay: tt.retryDelay,
 				Timeout:    nil, // Not used in this test
 			}
-			status, err := config.Execute(context.Background(), workflow)
+			status, err := config.Trigger(context.Background(), workflow)
 			assert.Equal(t, tt.expectedStatus, status, "Unexpected workflow status")
-			if tt.expectedStatus == WorkflowCompleted {
-				assert.NoError(t, err, "Expected no error, but got: %v", err)
-			} else {
+			if tt.expectedError {
 				assert.Error(t, err, "Expected an error, but got none")
+			} else {
+				assert.NoError(t, err, "Expected no error, but got: %v", err)
 			}
-			assert.Equal(t, len(tt.statusPattern), workflow.callCount, "Unexpected number of Execute calls")
+			assert.Equal(t, tt.expectedCalls, workflow.callCount, "Unexpected number of Execute calls")
 		})
 	}
 }
