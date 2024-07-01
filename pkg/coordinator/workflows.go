@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type WorkflowStatus int
+type WorkflowStatus byte
 
 const (
 	WorkflowNotStarted WorkflowStatus = iota
@@ -53,7 +53,8 @@ type Workflow interface {
 // Execute runs a workflow with the given configuration and context.
 func (config *WorkflowConfig) Execute(ctx context.Context, w Workflow) (WorkflowStatus, error) {
 	w.OnStart(config)
-	defer w.OnEnd(config, WorkflowNotStarted)
+	status := WorkflowNotStarted
+	defer w.OnEnd(config, status)
 
 	var timeoutCtx context.Context
 	var cancel context.CancelFunc
@@ -67,22 +68,20 @@ func (config *WorkflowConfig) Execute(ctx context.Context, w Workflow) (Workflow
 	for config.RetryCount < 1 || (config.Retry && config.RetryCount > 0) {
 		status, err := w.Execute(config)
 		if status == WorkflowCompleted {
-			w.OnEnd(config, status)
 			return status, nil
 		}
 		if !config.Retry || config.RetryCount == 0 {
-			w.OnEnd(config, status)
 			return status, err
 		}
 		config.RetryCount--
 		select {
 		case <-timeoutCtx.Done():
-			w.OnEnd(config, WorkflowTimedOut)
+			status = WorkflowTimedOut
 			return WorkflowTimedOut, timeoutCtx.Err()
 		case <-time.After(config.RetryDelay):
 		}
 	}
 
-	w.OnEnd(config, WorkflowFailed)
-	return WorkflowFailed, nil
+	status = WorkflowFailed
+	return status, nil
 }
