@@ -58,7 +58,7 @@ func (config *WorkflowConfig) Execute(ctx context.Context, w Workflow) (Workflow
 		select {
 		case <-timeoutCtx.Done():
 			status = WorkflowTimedOut
-			return WorkflowTimedOut, timeoutCtx.Err()
+			return status, timeoutCtx.Err()
 		case <-time.After(config.RetryDelay):
 		}
 	}
