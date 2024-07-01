@@ -9,34 +9,66 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// MockWorkflow simulates a workflow with deterministic behavior.
-type MockWorkflow struct {
+// ExampleWorkflow is a simple implementation of the Workflow interface
+type ExampleWorkflow struct {
 	Name          string
 	StatusPattern []WorkflowStatus // Determines the status pattern of Execute calls
 	callCount     int              // Tracks the number of Execute calls
 }
 
-func (mw *MockWorkflow) Execute(config *WorkflowConfig) (WorkflowStatus, error) {
+func (ew *ExampleWorkflow) Execute(config *WorkflowConfig) (WorkflowStatus, error) {
 	// Simulate work.
 	time.Sleep(time.Millisecond * 10)
-	if mw.callCount < len(mw.StatusPattern) {
-		status := mw.StatusPattern[mw.callCount]
-		mw.callCount++
+	if ew.callCount < len(ew.StatusPattern) {
+		status := ew.StatusPattern[ew.callCount]
+		ew.callCount++
 		if status == WorkflowCompleted {
 			return status, nil
 		}
 		return status, fmt.Errorf("predetermined failure occurred")
 	}
-	mw.callCount++
+	ew.callCount++
 	return WorkflowFailed, fmt.Errorf("predetermined failure occurred")
 }
 
-func (mw *MockWorkflow) OnStart(config *WorkflowConfig) {
-	fmt.Printf("Starting workflow: %s\n", mw.Name)
+func (ew *ExampleWorkflow) OnStart(config *WorkflowConfig) {
+
+	fmt.Printf("Starting workflow: %s\n", ew.Name)
 }
 
-func (mw *MockWorkflow) OnEnd(config *WorkflowConfig, status WorkflowStatus) {
-	fmt.Printf("Ending workflow: %s (Status: %s, Retries: %d)\n", mw.Name, status, config.RetryCount)
+func (ew *ExampleWorkflow) OnEnd(config *WorkflowConfig, status WorkflowStatus) {
+	fmt.Printf("Ending workflow: %s (Status: %s, Retries: %d)\n", ew.Name, status, config.RetryCount)
+}
+
+func Example_workflows() {
+	// Create a new ExampleWorkflow
+	workflow := &ExampleWorkflow{}
+
+	// Create a WorkflowConfig
+	config := &WorkflowConfig{
+		Retry:      true,
+		RetryCount: 3,
+		RetryDelay: 10 * time.Millisecond,
+		Timeout:    &[]time.Duration{30 * time.Millisecond}[0],
+	}
+
+	// Create a context
+	ctx := context.Background()
+
+	// Execute the workflow
+	status, err := config.Execute(ctx, workflow)
+
+	// Print the result
+	fmt.Printf("Final status: %s\n", status)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+
+	// Output:
+	// Workflow started
+	// Workflow ended with status: TimedOut
+	// Final status: TimedOut
+	// Error: context deadline exceeded
 }
 
 func TestWorkflowExecutor(t *testing.T) {
@@ -76,7 +108,7 @@ func TestWorkflowExecutor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			workflow := &MockWorkflow{
+			workflow := &ExampleWorkflow{
 				Name:          tt.name,
 				StatusPattern: tt.statusPattern,
 			}
