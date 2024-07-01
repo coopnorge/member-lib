@@ -5,6 +5,17 @@ import (
 	"time"
 )
 
+type WorkflowStatus byte
+
+const (
+	WorkflowNotStarted WorkflowStatus = iota
+	WorkflowRunning
+	WorkflowCompleted
+	WorkflowFailed
+	WorkflowCancelled
+	WorkflowTimedOut
+)
+
 // WorkflowConfig holds configuration options for a workflow.
 type WorkflowConfig struct {
 	Retry      bool
@@ -55,17 +66,6 @@ func (config *WorkflowConfig) Execute(ctx context.Context, w Workflow) (Workflow
 	status = WorkflowFailed
 	return status, nil
 }
-
-type WorkflowStatus byte
-
-const (
-	WorkflowNotStarted WorkflowStatus = iota
-	WorkflowRunning
-	WorkflowCompleted
-	WorkflowFailed
-	WorkflowCancelled
-	WorkflowTimedOut
-)
 
 func (s WorkflowStatus) String() string {
 	switch s {
