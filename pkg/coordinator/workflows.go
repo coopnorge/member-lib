@@ -2,6 +2,7 @@ package coordinator
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -84,4 +85,52 @@ func (config *WorkflowConfig) Execute(ctx context.Context, w Workflow) (Workflow
 
 	status = WorkflowFailed
 	return status, nil
+}
+
+// ExampleWorkflow is a simple implementation of the Workflow interface
+type ExampleWorkflow struct{}
+
+func (ew *ExampleWorkflow) Execute(config *WorkflowConfig) (WorkflowStatus, error) {
+	// Simulate some work
+	time.Sleep(50 * time.Millisecond)
+	return WorkflowCompleted, nil
+}
+
+func (ew *ExampleWorkflow) OnStart(config *WorkflowConfig) {
+	fmt.Println("Workflow started")
+}
+
+func (ew *ExampleWorkflow) OnEnd(config *WorkflowConfig, status WorkflowStatus) {
+	fmt.Printf("Workflow ended with status: %s\n", status)
+}
+
+func Example_workflows() {
+	// Create a new ExampleWorkflow
+	workflow := &ExampleWorkflow{}
+
+	// Create a WorkflowConfig
+	config := &WorkflowConfig{
+		Retry:      true,
+		RetryCount: 3,
+		RetryDelay: 10 * time.Millisecond,
+		Timeout:    &[]time.Duration{30 * time.Millisecond}[0],
+	}
+
+	// Create a context
+	ctx := context.Background()
+
+	// Execute the workflow
+	status, err := config.Execute(ctx, workflow)
+
+	// Print the result
+	fmt.Printf("Final status: %s\n", status)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+
+	// Output:
+	// Workflow started
+	// Workflow ended with status: TimedOut
+	// Final status: TimedOut
+	// Error: context deadline exceeded
 }
