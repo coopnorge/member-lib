@@ -145,19 +145,16 @@ func (rpm *ResourcePoolManager[T]) AcquireResource(ctx context.Context, isNeedTo
 // Acquisition of resources is thread-safe.
 func (rpm *ResourcePoolManager[T]) getResource(resourceObtained chan<- resourceObtainer[T]) {
 	var acqManagedResource *managedResource[T]
+
 	rpm.pool.Range(func(_, value any) bool {
 		mr, ok := value.(*managedResource[T])
 		if !ok {
-			return false
+			return true
 		}
 
-		mr.mu.Lock()
-		defer mr.mu.Unlock()
-		if !mr.isAcquired {
-			// NOTE: If usageCount not 0 then it's set to be unlimited amount of usages.
-			if rpm.resourceUsageLimit == 0 || mr.usageCount < rpm.resourceUsageLimit {
-				acqManagedResource = mr
-			}
+		if mr.tryAcquire(rpm.resourceUsageLimit) {
+			acqManagedResource = mr
+			return false // Stop iterating, we found an available resource
 		}
 
 		return true
@@ -169,16 +166,26 @@ func (rpm *ResourcePoolManager[T]) getResource(resourceObtained chan<- resourceO
 			return
 		}
 		acqManagedResource = rpm.createManagedResource()
+		acqManagedResource.tryAcquire(rpm.resourceUsageLimit)
+		rpm.pool.Store(acqManagedResource.resource, acqManagedResource)
 	}
 
-	acqManagedResource.mu.Lock()
-	defer acqManagedResource.mu.Unlock()
-
-	acqManagedResource.usageCount++
-	acqManagedResource.isAcquired = true
-	rpm.pool.Store(acqManagedResource.resource, acqManagedResource)
-
 	resourceObtained <- resourceObtainer[T]{resource: acqManagedResource.resource}
+}
+
+// tryAcquire attempts to acquire the resource if it's available and within usage limits.
+// Returns true if successful, false otherwise.
+func (mr *managedResource[T]) tryAcquire(resourceUsageLimit uint8) bool {
+	mr.mu.Lock()
+	defer mr.mu.Unlock()
+
+	if !mr.isAcquired && (resourceUsageLimit == 0 || mr.usageCount < resourceUsageLimit) {
+		mr.isAcquired = true
+		mr.usageCount++
+		return true
+	}
+
+	return false
 }
 
 // ReleaseResource releases a given resource back to the pool.
