@@ -154,7 +154,7 @@ func (rpm *ResourcePoolManager[T]) getResource(resourceObtained chan<- resourceO
 
 		if mr.tryAcquire(rpm.resourceUsageLimit) {
 			acqManagedResource = mr
-			return false // Stop iterating, we found an available resource
+			return false
 		}
 
 		return true
@@ -176,9 +176,6 @@ func (rpm *ResourcePoolManager[T]) getResource(resourceObtained chan<- resourceO
 // tryAcquire attempts to acquire the resource if it's available and within usage limits.
 // Returns true if successful, false otherwise.
 func (mr *managedResource[T]) tryAcquire(resourceUsageLimit uint8) bool {
-	mr.mu.Lock()
-	defer mr.mu.Unlock()
-
 	if !mr.isAcquired && (resourceUsageLimit == 0 || mr.usageCount < resourceUsageLimit) {
 		mr.isAcquired = true
 		mr.usageCount++
