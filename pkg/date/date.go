@@ -30,6 +30,7 @@ func ParseYear(year, layout string) (uint16, error) {
 		return 0, fmt.Errorf("error parsing year: %w", parseDateComponentErr)
 	}
 
+	//nolint:gosec // year can never have an overflow
 	return uint16(date.Year()), nil
 }
 
@@ -44,6 +45,7 @@ func ParseMonth(month, layout string) (uint8, error) {
 		return 0, fmt.Errorf("error parsing month: %w", parseDateComponentErr)
 	}
 
+	//nolint:gosec // month can never have an overflow
 	return uint8(date.Month()), nil
 }
 
@@ -58,6 +60,7 @@ func ParseDayOfTheMonth(day, layout string) (uint8, error) {
 		return 0, fmt.Errorf("error parsing day: %w", parseDateComponentErr)
 	}
 
+	//nolint:gosec // day can never have an overflow
 	return uint8(date.Day()), nil
 }
 
