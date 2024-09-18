@@ -22,12 +22,9 @@ jobs:
       docker-compose-service: golang-devtools
       XDG_CACHE_HOME: ${{ github.workspace }}/.cache/xdg
       GO_VERSION: '1.23'
+      GOTOOLCHAIN: '1.23'
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -42,17 +39,6 @@ jobs:
           restore-keys: |
             xdg-${{ github.repository }}-${{ github.job }}-${{ steps.xdg_cache_hash.outputs.xdg_cache_hash }}
             xdg-${{ github.repository }}-${{ github.job }}-
-      - name: Enforce Go version
-        run: |
-          go version
-          if [[ $(go version) != *"go${{ env.GO_VERSION }}"* ]]; then
-            echo "Incorrect Go version. Expected ${{ env.GO_VERSION }}"
-            exit 1
-          fi
-      - name: Enforce Go tool versions
-        run: |
-          go mod verify
-          go vet ./...
       - name: Validate and Test
         run: docker compose run --rm ${{ env.docker-compose-service }} validate VERBOSE=all
 
