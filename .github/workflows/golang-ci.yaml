@@ -29,8 +29,20 @@ jobs:
           version: v1.60.3
           args: --out-format line-number --color never -v
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+        run: |
+          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+          go tool cover -func=coverage.txt -o=coverage.out
+          echo "COVERAGE=$(grep total: coverage.out | grep -Eo '[0-9]+\.[0-9]+')" >> $GITHUB_ENV
 
+      - name: Create coverage badge
+        uses: schneegans/dynamic-badges-action@v1.6.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: <your-gist-id>
+          filename: go-coverage.json
+          label: Coverage
+          message: ${{ env.COVERAGE }}%
+          color: green
   build:
     needs:
       - "golang-ci"
