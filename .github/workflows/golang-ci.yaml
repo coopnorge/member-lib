@@ -30,8 +30,7 @@ jobs:
           args: --out-format line-number --color never -v
       - name: Run tests with coverage
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+
   build:
     needs:
       - "golang-ci"
