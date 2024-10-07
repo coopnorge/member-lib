@@ -38,11 +38,10 @@ type ClientOAuth interface {
 
 // AbstractClient allows get access token from IDP services.
 type AbstractClient struct {
-	acTokenURL   string
-	transport    *http.Client
-	cachedToken  Token
-	tokenExpires time.Time
-	mu           sync.RWMutex
+	acTokenURL  string
+	transport   *http.Client
+	cachedToken Token
+	mu          sync.RWMutex
 	ClientOAuth
 }
 
@@ -66,15 +65,25 @@ func (c *AbstractClient) AudiencePayload() ([]byte, error) {
 
 // AccessToken allows to obtain access token that is registered for the application client.
 func (c *AbstractClient) AccessToken() (Token, error) {
-	c.mu.RLock()
-	if c.cachedToken.AccessToken != "" && time.Now().Before(c.tokenExpires) {
-		token := c.cachedToken
-		c.mu.RUnlock()
-		return token, nil
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.isValidToken() {
+		return c.cachedToken, nil
 	}
-	c.mu.RUnlock()
+	newToken, err := c.getNewAccessToken()
+	if err != nil {
+		return Token{}, err
+	}
+	c.cachedToken = newToken
+	return newToken, nil
+}
 
-	return c.getNewAccessToken()
+func (c *AbstractClient) isValidToken() bool {
+	if c.cachedToken.AccessToken == "" {
+		return false
+	}
+	expiry := time.Now().Add(time.Duration(c.cachedToken.ExpiresIn) * time.Second)
+	return !time.Now().After(expiry)
 }
 
 func (c *AbstractClient) getNewAccessToken() (Token, error) {
@@ -112,9 +121,5 @@ func (c *AbstractClient) getNewAccessToken() (Token, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
 		return Token{}, fmt.Errorf("error decoding response: %w", err)
 	}
-	c.mu.Lock()
-	c.cachedToken = tokenResponse
-	c.tokenExpires = time.Now().Add(time.Duration(tokenResponse.ExpiresIn) * time.Second)
-	c.mu.Unlock()
 	return tokenResponse, nil
 }
