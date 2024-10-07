@@ -9,7 +9,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/patrickmn/go-cache"
+)
+
+const (
+	defaultExpiration = 30 * time.Minute
 )
 
 // Token represents the structure of the OAuth 2.0 token response.
@@ -23,6 +30,8 @@ type Token struct {
 type ClientConfig struct {
 	// AccessTokenURL authorization server.
 	AccessTokenURL string
+	// Name of the client
+	ClientName string
 	// Transport that supports HTTP protocol.
 	Transport *http.Client
 }
@@ -39,12 +48,14 @@ type ClientOAuth interface {
 type AbstractClient struct {
 	acTokenURL string
 	transport  *http.Client
+	cache      *cache.Cache
+	clientName string
 	ClientOAuth
 }
 
 // NewClient that allows get access token.
 func NewClient(cfg *ClientConfig) *AbstractClient {
-	c := &AbstractClient{acTokenURL: cfg.AccessTokenURL}
+	c := &AbstractClient{acTokenURL: cfg.AccessTokenURL, cache: cache.New(defaultExpiration, 0), clientName: cfg.ClientName}
 
 	if cfg.Transport != nil {
 		c.transport = cfg.Transport
@@ -62,6 +73,14 @@ func (c *AbstractClient) AudiencePayload() ([]byte, error) {
 
 // AccessToken allows to obtain access token that is registered for the application client.
 func (c *AbstractClient) AccessToken() (Token, error) {
+	key := strings.ToLower(fmt.Sprintf("%s_jwt_token", c.clientName))
+	if cachedToken, found := c.cache.Get(key); found {
+		return cachedToken.(Token), nil
+	}
+	return c.getNewAccessToken()
+}
+
+func (c *AbstractClient) getNewAccessToken() (Token, error) {
 	payload, payloadErr := c.ClientOAuth.AudiencePayload()
 	if payloadErr != nil {
 		return Token{}, payloadErr
@@ -96,6 +115,8 @@ func (c *AbstractClient) AccessToken() (Token, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
 		return Token{}, fmt.Errorf("error decoding response: %w", err)
 	}
-
+	key := strings.ToLower(fmt.Sprintf("%s_jwt_token", c.clientName))
+	ttl := time.Duration(tokenResponse.ExpiresIn) * time.Second
+	c.cache.Set(key, tokenResponse, ttl)
 	return tokenResponse, nil
 }
