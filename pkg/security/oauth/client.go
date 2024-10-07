@@ -9,14 +9,8 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
+	"sync"
 	"time"
-
-	"github.com/patrickmn/go-cache"
-)
-
-const (
-	defaultExpiration = 30 * time.Minute
 )
 
 // Token represents the structure of the OAuth 2.0 token response.
@@ -30,8 +24,6 @@ type Token struct {
 type ClientConfig struct {
 	// AccessTokenURL authorization server.
 	AccessTokenURL string
-	// Name of the client
-	ClientName string
 	// Transport that supports HTTP protocol.
 	Transport *http.Client
 }
@@ -46,16 +38,17 @@ type ClientOAuth interface {
 
 // AbstractClient allows get access token from IDP services.
 type AbstractClient struct {
-	acTokenURL string
-	transport  *http.Client
-	cache      *cache.Cache
-	clientName string
+	acTokenURL   string
+	transport    *http.Client
+	cachedToken  Token
+	tokenExpires time.Time
+	mu           sync.RWMutex
 	ClientOAuth
 }
 
 // NewClient that allows get access token.
 func NewClient(cfg *ClientConfig) *AbstractClient {
-	c := &AbstractClient{acTokenURL: cfg.AccessTokenURL, cache: cache.New(defaultExpiration, 0), clientName: cfg.ClientName}
+	c := &AbstractClient{acTokenURL: cfg.AccessTokenURL}
 
 	if cfg.Transport != nil {
 		c.transport = cfg.Transport
@@ -73,10 +66,14 @@ func (c *AbstractClient) AudiencePayload() ([]byte, error) {
 
 // AccessToken allows to obtain access token that is registered for the application client.
 func (c *AbstractClient) AccessToken() (Token, error) {
-	key := strings.ToLower(fmt.Sprintf("%s_jwt_token", c.clientName))
-	if cachedToken, found := c.cache.Get(key); found {
-		return cachedToken.(Token), nil
+	c.mu.RLock()
+	if c.cachedToken.AccessToken != "" && time.Now().Before(c.tokenExpires) {
+		token := c.cachedToken
+		c.mu.RUnlock()
+		return token, nil
 	}
+	c.mu.RUnlock()
+
 	return c.getNewAccessToken()
 }
 
@@ -115,8 +112,9 @@ func (c *AbstractClient) getNewAccessToken() (Token, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
 		return Token{}, fmt.Errorf("error decoding response: %w", err)
 	}
-	key := strings.ToLower(fmt.Sprintf("%s_jwt_token", c.clientName))
-	ttl := time.Duration(tokenResponse.ExpiresIn) * time.Second
-	c.cache.Set(key, tokenResponse, ttl)
+	c.mu.Lock()
+	c.cachedToken = tokenResponse
+	c.tokenExpires = time.Now().Add(time.Duration(tokenResponse.ExpiresIn) * time.Second)
+	c.mu.Unlock()
 	return tokenResponse, nil
 }
