@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // stubClientOAuth implements ClientOAuth interface for testing.
@@ -52,6 +54,11 @@ func TestAccessTokenSuccess(t *testing.T) {
 	if token.ExpiresIn != 3600 {
 		t.Errorf("Expected expires_in to be 3600, got '%d'", token.ExpiresIn)
 	}
+
+	// check if client.cachedToken is now not empty and valid
+	valid := client.isValidToken()
+	assert.True(t, valid)
+	assert.NotEmpty(t, client.cachedToken)
 }
 
 func TestAccessTokenHTTPError(t *testing.T) {
