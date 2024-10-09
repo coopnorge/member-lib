@@ -62,38 +62,38 @@ func NewTraceLog(adapter LogAdapter) *TraceLog {
 
 // SetContextMetadata allows preallocate request metadata for TraceLog.
 // Useful to expand log information across application level.
-func (tl *TraceLog) SetContextMetadata(reqCtx context.Context, reqLogMetadataFields MetadataFields) context.Context {
-	metadata, isFoundMetadata := reqCtx.Value(LoggerMetadataContextKey).(MetadataFields)
-	if !isFoundMetadata {
-		return context.WithValue(reqCtx, LoggerMetadataContextKey, reqLogMetadataFields)
+func (tl *TraceLog) SetContextMetadata(srcCtx context.Context, newMetadata MetadataFields) context.Context {
+	existingMetadata, ok := srcCtx.Value(LoggerMetadataContextKey).(MetadataFields)
+	if !ok {
+		return context.WithValue(srcCtx, LoggerMetadataContextKey, newMetadata)
 	}
 
-	mergedMeta := maps.Clone(reqLogMetadataFields)
-	maps.Copy(mergedMeta, metadata)
+	mergedMeta := maps.Clone(newMetadata)
+	maps.Copy(mergedMeta, existingMetadata)
 
-	for k, v := range reqLogMetadataFields {
-		if metadata[k] != v {
+	for k, v := range newMetadata {
+		if existingMetadata[k] != v {
 			mergedMeta[k] = v
 		}
 	}
 
-	return context.WithValue(reqCtx, LoggerMetadataContextKey, mergedMeta)
+	return context.WithValue(srcCtx, LoggerMetadataContextKey, mergedMeta)
 }
 
 // Log information with intercepted metadata from request.
-func (tl *TraceLog) Log(sourceCtx context.Context, logSeverity LogAdapterLevel, logMessage string, logMeta *MetadataFields) {
+func (tl *TraceLog) Log(srcCtx context.Context, severityLvl LogAdapterLevel, logMessage string, metadata *MetadataFields) {
 	if tl.logAdapter == nil {
 		return
 	}
 
-	logFieldsToLog := make(MetadataFields)
-	if logMeta != nil {
-		logFieldsToLog = *logMeta
+	metadataToLog := make(MetadataFields)
+	if metadata != nil {
+		metadataToLog = *metadata
 	}
 
-	if metadata, ok := sourceCtx.Value(LoggerMetadataContextKey).(MetadataFields); ok {
-		maps.Copy(logFieldsToLog, metadata)
+	if existingMetadata, ok := srcCtx.Value(LoggerMetadataContextKey).(MetadataFields); ok {
+		maps.Copy(metadataToLog, existingMetadata)
 	}
 
-	tl.logAdapter.LogAdaptersWriter(sourceCtx, logSeverity, logMessage, &logFieldsToLog)
+	tl.logAdapter.LogAdaptersWriter(srcCtx, severityLvl, logMessage, &metadataToLog)
 }
