@@ -45,11 +45,11 @@ type (
 )
 
 const (
-	LogAdapterDebug LogAdapterLevel = iota - 1
-	LogAdapterInfo
-	LogAdapterWarn
+	LogAdapterFatal LogAdapterLevel = iota
 	LogAdapterError
-	LogAdapterFatal
+	LogAdapterWarn
+	LogAdapterInfo
+	LogAdapterDebug
 )
 
 // LoggerMetadataContextKey that must be utilized for metadata sharing inside context.
@@ -60,7 +60,7 @@ func NewTraceLog(adapter LogAdapter) *TraceLog {
 	return &TraceLog{logAdapter: adapter}
 }
 
-// SetRequestMetadataContext allows preallocate request metadata for TraceLog.
+// SetContextMetadata allows preallocate request metadata for TraceLog.
 // Useful to expand log information across application level.
 func (tl *TraceLog) SetContextMetadata(reqCtx context.Context, reqLogMetadataFields MetadataFields) context.Context {
 	metadata, isFoundMetadata := reqCtx.Value(LoggerMetadataContextKey).(MetadataFields)
