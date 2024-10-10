@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -59,6 +60,52 @@ func TestAccessTokenSuccess(t *testing.T) {
 	valid := client.isValidToken()
 	assert.True(t, valid)
 	assert.NotEmpty(t, client.cachedToken)
+}
+
+func TestAccessTokenExpired(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		jsonResponse := `{"access_token": "test-token", "token_type": "Bearer", "expires_in": 1}`
+		w.Write([]byte(jsonResponse))
+	}))
+	defer server.Close()
+
+	cfg := &ClientConfig{
+		AccessTokenURL: server.URL,
+		Transport:      server.Client(),
+	}
+	client := NewClient(cfg)
+	client.ClientOAuth = &stubClientOAuth{}
+
+	token, err := client.AccessToken()
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if token.AccessToken != "test-token" {
+		t.Errorf("Expected access token to be 'test-token', got '%s'", token.AccessToken)
+	}
+
+	if token.TokenType != "Bearer" {
+		t.Errorf("Expected token type to be 'Bearer', got '%s'", token.TokenType)
+	}
+
+	if token.ExpiresIn != 1 {
+		t.Errorf("Expected expires_in to be 3600, got '%d'", token.ExpiresIn)
+	}
+
+	time.Sleep(time.Second + time.Millisecond*500)
+
+	// check if client.cachedToken is now not empty and valid
+	valid := client.isValidToken()
+	assert.False(t, valid)
+
+	// Must be give new token
+	_, err = client.AccessToken()
+	assert.NoError(t, err)
+
+	valid = client.isValidToken()
+	assert.True(t, valid)
 }
 
 func TestAccessTokenHTTPError(t *testing.T) {

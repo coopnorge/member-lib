@@ -15,9 +15,10 @@ import (
 
 // Token represents the structure of the OAuth 2.0 token response.
 type Token struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int64  `json:"expires_in,omitempty"`
+	AccessToken string    `json:"access_token"`
+	TokenType   string    `json:"token_type"`
+	ExpiresIn   int64     `json:"expires_in,omitempty"`
+	FetchedAt   time.Time `json:"fetched_at,omitempty"`
 }
 
 // ClientConfig that will be applied to Client.
@@ -82,8 +83,10 @@ func (c *AbstractClient) isValidToken() bool {
 	if c.cachedToken.AccessToken == "" {
 		return false
 	}
-	expiry := time.Now().Add(time.Duration(c.cachedToken.ExpiresIn) * time.Second)
-	return !time.Now().After(expiry)
+
+	expiry := c.cachedToken.FetchedAt.Add(time.Duration(c.cachedToken.ExpiresIn) * time.Second)
+
+	return time.Now().Before(expiry)
 }
 
 func (c *AbstractClient) getNewAccessToken() (Token, error) {
@@ -121,5 +124,8 @@ func (c *AbstractClient) getNewAccessToken() (Token, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
 		return Token{}, fmt.Errorf("error decoding response: %w", err)
 	}
+
+	tokenResponse.FetchedAt = time.Now()
+
 	return tokenResponse, nil
 }
