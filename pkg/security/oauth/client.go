@@ -18,7 +18,7 @@ type Token struct {
 	AccessToken string    `json:"access_token"`
 	TokenType   string    `json:"token_type"`
 	ExpiresIn   int64     `json:"expires_in,omitempty"`
-	IssueAt     time.Time `json:"issue_at,omitempty"`
+	FetchedAt   time.Time `json:"fetched_at,omitempty"`
 }
 
 // ClientConfig that will be applied to Client.
@@ -84,7 +84,7 @@ func (c *AbstractClient) isValidToken() bool {
 		return false
 	}
 
-	expiry := c.cachedToken.IssueAt.Add(time.Duration(c.cachedToken.ExpiresIn) * time.Second)
+	expiry := c.cachedToken.FetchedAt.Add(time.Duration(c.cachedToken.ExpiresIn) * time.Second)
 
 	return time.Now().Before(expiry)
 }
@@ -125,7 +125,7 @@ func (c *AbstractClient) getNewAccessToken() (Token, error) {
 		return Token{}, fmt.Errorf("error decoding response: %w", err)
 	}
 
-	tokenResponse.IssueAt = time.Now()
+	tokenResponse.FetchedAt = time.Now()
 
 	return tokenResponse, nil
 }
