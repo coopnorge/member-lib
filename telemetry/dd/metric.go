@@ -205,7 +205,11 @@ func (d ddMetricExporter) histogramFloat64(name string, p metricdata.HistogramDa
 	}
 	for i := 0; i < len(p.Bounds)-1; i++ {
 		var lower, upper float64
-		lower, upper = p.Bounds[i], p.Bounds[i+1]
+		if i+1 < len(p.Bounds) {
+			lower, upper = p.Bounds[i], p.Bounds[i+1]
+		} else {
+			lower, upper = p.Bounds[i], math.Inf(1)
+		}
 		bounds := []attribute.KeyValue{
 			attribute.String("lower_bound", fmt.Sprintf("%f", lower)),
 			attribute.String("upper_bound", fmt.Sprintf("%f", upper)),
@@ -226,7 +230,11 @@ func (d ddMetricExporter) histogramInt64(name string, p metricdata.HistogramData
 	}
 	for i := 0; i < len(p.Bounds)-1; i++ {
 		var lower, upper float64
-		lower, upper = p.Bounds[i], p.Bounds[i+1]
+		if i+1 < len(p.Bounds) {
+			lower, upper = p.Bounds[i], p.Bounds[i+1]
+		} else {
+			lower, upper = p.Bounds[i], math.Inf(1)
+		}
 		bounds := []attribute.KeyValue{
 			attribute.String("lower_bound", fmt.Sprintf("%f", lower)),
 			attribute.String("upper_bound", fmt.Sprintf("%f", upper)),
