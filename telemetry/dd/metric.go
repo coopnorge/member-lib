@@ -154,7 +154,7 @@ func (d ddMetricExporter) gaugeInt64(name string, p metricdata.DataPoint[int64],
 
 func normalizeAttributes(attributes []attribute.KeyValue) (normalized []attribute.KeyValue) {
 	for _, kv := range attributes {
-		normalized = append(attributes, normalizeAttribute(kv))
+		normalized = append(normalized, normalizeAttribute(kv))
 	}
 	return normalized
 }
