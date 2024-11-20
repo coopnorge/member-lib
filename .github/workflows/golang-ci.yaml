@@ -1,16 +1,25 @@
----
 name: "Golang CI"
 on:
   push: { }
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  golang-ci:
-    name: "Lint and Test Backend"
+  matrix-prep:
     runs-on: ubuntu-latest
+    outputs:
+      paths: '["pkg"]'
+    steps:
+      - run: echo "Preparing matrix"
+
+  golang-ci:
+    needs: matrix-prep
+    name: "Lint Modules"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -21,17 +30,35 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60.3
-          args: --out-format line-number --color never -v
+          working-directory: ${{ matrix.path }}
+          args: --out-format line-number --color never -v ./...
+
+  gotest:
+    needs: matrix-prep
+    name: "Test Modules"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+        run: |
+          cd ${{ matrix.path }}
+          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
   build:
     needs:
       - "golang-ci"
+      - "gotest"
     if: always()
     runs-on: ubuntu-latest
     steps:
       - run: exit 1
         name: "Catch errors"
         if: |
-          needs.golang-ci.result == 'failure'
+          needs.golang-ci.result == 'failure' || contains(needs.*.result, 'failure')
