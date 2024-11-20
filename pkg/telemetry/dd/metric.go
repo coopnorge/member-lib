@@ -73,19 +73,19 @@ func (d ddMetricExporter) Export(_ context.Context, metrics *metricdata.Resource
 		// TODO(hadrienk): Add scope scopeMetrics.Scope
 		for _, m := range scopeMetrics.Metrics {
 			name := m.Name
-			switch a := m.Data.(type) {
+			switch dp := m.Data.(type) {
 			case metricdata.Gauge[int64]:
-				err = d.exportGaugeInt(a, name, res)
+				err = d.exportGaugeInt(dp.DataPoints, name, res)
 			case metricdata.Gauge[float64]:
-				err = d.exportGaugeFloat(a, name, res)
+				err = d.exportGaugeFloat(dp.DataPoints, name, res)
 			case metricdata.Sum[int64]:
-				err = d.exportSumInt(a, name, res)
+				err = d.exportSumInt(dp.DataPoints, name, res)
 			case metricdata.Sum[float64]:
-				err = d.exportSumFloat(a, name, res)
+				err = d.exportSumFloat(dp.DataPoints, name, res)
 			case metricdata.Histogram[int64]:
-				err = d.exportHistogramInt(a, name, res)
+				err = d.exportHistogramInt(dp.DataPoints, name, res)
 			case metricdata.Histogram[float64]:
-				err = d.exportHistogramFloat(a, name, res)
+				err = d.exportHistogramFloat(dp.DataPoints, name, res)
 			default:
 				err = errors.Join(err, errors.New("unknown metric type"))
 			}
@@ -94,43 +94,43 @@ func (d ddMetricExporter) Export(_ context.Context, metrics *metricdata.Resource
 	return err
 }
 
-func (d ddMetricExporter) exportHistogramFloat(a metricdata.Histogram[float64], name string, res []attribute.KeyValue) (err error) {
-	for _, point := range a.DataPoints {
+func (d ddMetricExporter) exportHistogramFloat(dp []metricdata.HistogramDataPoint[float64], name string, res []attribute.KeyValue) (err error) {
+	for _, point := range dp {
 		err = errors.Join(err, d.histogramFloat64(name, point, res))
 	}
 	return err
 }
 
-func (d ddMetricExporter) exportHistogramInt(a metricdata.Histogram[int64], name string, res []attribute.KeyValue) (err error) {
-	for _, point := range a.DataPoints {
+func (d ddMetricExporter) exportHistogramInt(dp []metricdata.HistogramDataPoint[int64], name string, res []attribute.KeyValue) (err error) {
+	for _, point := range dp {
 		err = errors.Join(err, d.histogramInt64(name, point, res))
 	}
 	return err
 }
 
-func (d ddMetricExporter) exportSumFloat(a metricdata.Sum[float64], name string, res []attribute.KeyValue) (err error) {
-	for _, point := range a.DataPoints {
+func (d ddMetricExporter) exportSumFloat(dp []metricdata.DataPoint[float64], name string, res []attribute.KeyValue) (err error) {
+	for _, point := range dp {
 		err = errors.Join(err, d.countFloat64(name, point, res))
 	}
 	return err
 }
 
-func (d ddMetricExporter) exportSumInt(a metricdata.Sum[int64], name string, res []attribute.KeyValue) (err error) {
-	for _, point := range a.DataPoints {
+func (d ddMetricExporter) exportSumInt(dp []metricdata.DataPoint[int64], name string, res []attribute.KeyValue) (err error) {
+	for _, point := range dp {
 		err = errors.Join(err, d.countInt64(name, point, res))
 	}
 	return err
 }
 
-func (d ddMetricExporter) exportGaugeFloat(a metricdata.Gauge[float64], name string, res []attribute.KeyValue) (err error) {
-	for _, point := range a.DataPoints {
+func (d ddMetricExporter) exportGaugeFloat(dp []metricdata.DataPoint[float64], name string, res []attribute.KeyValue) (err error) {
+	for _, point := range dp {
 		err = errors.Join(err, d.gaugeFloat64(name, point, res))
 	}
 	return err
 }
 
-func (d ddMetricExporter) exportGaugeInt(a metricdata.Gauge[int64], name string, res []attribute.KeyValue) (err error) {
-	for _, point := range a.DataPoints {
+func (d ddMetricExporter) exportGaugeInt(dp []metricdata.DataPoint[int64], name string, res []attribute.KeyValue) (err error) {
+	for _, point := range dp {
 		err = errors.Join(err, d.gaugeInt64(name, point, res))
 	}
 	return err
