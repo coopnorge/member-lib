@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   golang-ci:
-    name: "Lint Backend"
+    name: "Lint Modules"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
           version: v1.60.3
           args: --out-format line-number --color never -v $TEST_PATHS
   gotest:
-    name: "Lint Backend"
+    name: "Test Modules"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
