@@ -7,6 +7,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.32.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.8.0
 	go.opentelemetry.io/otel/log v0.8.0
 	go.opentelemetry.io/otel/sdk v1.32.0
 	go.opentelemetry.io/otel/sdk/log v0.8.0
