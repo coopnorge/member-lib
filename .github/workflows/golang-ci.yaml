@@ -1,7 +1,7 @@
----
 name: "Golang CI"
 env:
   TEST_PATHS: "./configloader/... pkg/..."
+
 on:
   push: { }
 
@@ -13,28 +13,37 @@ jobs:
   golang-ci:
     name: "Lint Modules"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lint_path: ["./configloader", "./pkg"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.23"
-      - name: golangci-lint
+      - name: golangci-lint in ${{ matrix.lint_path }}
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60.3
-          args: --out-format line-number --color never -v $TEST_PATHS
+          args: --out-format line-number --color never -v ./${{ matrix.lint_path }}/...
+
   gotest:
     name: "Test Modules"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test_path: ["./configloader", "./pkg"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.23"
-      - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic $TEST_PATHS
+      - name: Run tests with coverage in ${{ matrix.test_path }}
+        run: |
+          cd ${{ matrix.test_path }}
+          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
   build:
     needs:
@@ -46,4 +55,4 @@ jobs:
       - run: exit 1
         name: "Catch errors"
         if: |
-          needs.golang-ci.result == 'failure'
+          needs.golang-ci.result == 'failure' || contains(needs.*.result, 'failure')
