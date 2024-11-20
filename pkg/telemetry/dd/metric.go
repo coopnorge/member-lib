@@ -14,6 +14,8 @@ import (
 	"strings"
 )
 
+var _ sdkmetric.Exporter = *(*ddMetricExporter)(nil)
+
 type ddMetricExporter struct {
 	client *statsd.Client
 }
@@ -21,6 +23,9 @@ type ddMetricExporter struct {
 // NewDatadogMetricExporter creates a metric.Exporter that forwards the instrument
 // values to the Datadog statsd.
 func NewDatadogMetricExporter(sc *statsd.Client) (sdkmetric.Exporter, error) {
+	if sc == nil {
+		return nil, errors.New("statsd.Client is nil")
+	}
 	return &ddMetricExporter{
 		client: sc,
 	}, nil
@@ -188,10 +193,10 @@ func (d ddMetricExporter) histogramFloat64(name string, p metricdata.HistogramDa
 	err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.sum", name), int64(p.Sum), toTags(tags, p.Attributes.ToSlice()), 1.0))
 	err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.count", name), int64(p.Count), toTags(tags, p.Attributes.ToSlice()), 1.0))
 	if v, ok := p.Min.Value(); ok {
-		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.min", name), float64(v), toTags(tags, p.Attributes.ToSlice()), 1.0))
+		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.min", name), v, toTags(tags, p.Attributes.ToSlice()), 1.0))
 	}
 	if v, ok := p.Max.Value(); ok {
-		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.max", name), float64(v), toTags(tags, p.Attributes.ToSlice()), 1.0))
+		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.max", name), v, toTags(tags, p.Attributes.ToSlice()), 1.0))
 	}
 	for i := 0; i < len(p.Bounds); i += 2 {
 		var lower, upper float64
