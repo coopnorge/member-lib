@@ -189,9 +189,18 @@ func toTag(attr attribute.KeyValue) string {
 	return tag
 }
 
+func safeUintToInt(val uint64) (int64, error) {
+	if val > math.MaxInt64 {
+		return 0, fmt.Errorf("value %d exceeds max int", val)
+	}
+	return int64(val), nil
+}
+
 func (d ddMetricExporter) histogramFloat64(name string, p metricdata.HistogramDataPoint[float64], tags []attribute.KeyValue) (err error) {
 	err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.sum", name), int64(p.Sum), toTags(tags, p.Attributes.ToSlice()), 1.0))
-	err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.count", name), int64(p.Count), toTags(tags, p.Attributes.ToSlice()), 1.0))
+	if val, err := safeUintToInt(p.Count); err == nil {
+		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.count", name), val, toTags(tags, p.Attributes.ToSlice()), 1.0))
+	}
 	if v, ok := p.Min.Value(); ok {
 		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.min", name), v, toTags(tags, p.Attributes.ToSlice()), 1.0))
 	}
@@ -209,14 +218,18 @@ func (d ddMetricExporter) histogramFloat64(name string, p metricdata.HistogramDa
 			attribute.String("lower_bound", fmt.Sprintf("%f", lower)),
 			attribute.String("upper_bound", fmt.Sprintf("%f", upper)),
 		}
-		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.bucket", name), int64(p.BucketCounts[i]), toTags(tags, p.Attributes.ToSlice(), bounds), 1.0))
+		if val, err := safeUintToInt(p.BucketCounts[i]); err == nil {
+			err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.bucket", name), val, toTags(tags, p.Attributes.ToSlice(), bounds), 1.0))
+		}
 	}
 	return err
 }
 
 func (d ddMetricExporter) histogramInt64(name string, p metricdata.HistogramDataPoint[int64], tags []attribute.KeyValue) (err error) {
 	err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.sum", name), p.Sum, toTags(tags, p.Attributes.ToSlice()), 1.0))
-	err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.count", name), int64(p.Count), toTags(tags, p.Attributes.ToSlice()), 1.0))
+	if val, err := safeUintToInt(p.Count); err == nil {
+		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.count", name), val, toTags(tags, p.Attributes.ToSlice()), 1.0))
+	}
 	if v, ok := p.Min.Value(); ok {
 		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.min", name), float64(v), toTags(tags, p.Attributes.ToSlice()), 1.0))
 	}
