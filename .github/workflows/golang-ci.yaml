@@ -1,7 +1,7 @@
 ---
 name: "Golang CI"
 env:
-  TEST_PATHS: "./configloader/... memberlib/..."
+  TEST_PATHS: "./configloader/... pkg/..."
 on:
   push: { }
 
