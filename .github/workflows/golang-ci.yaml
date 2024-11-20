@@ -15,18 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        lint_path: ["./configloader", "./pkg"]
+        lint_path: ["configloader", "pkg"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.23"
-      - name: golangci-lint in ${{ matrix.lint_path }}
+      - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60.3
-          args: --out-format line-number --color never -v ./${{ matrix.lint_path }}/...
+          working-directory: ${{ matrix.lint_path }}
+          args: --out-format line-number --color never -v ./...
 
   gotest:
     name: "Test Modules"
