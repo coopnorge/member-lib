@@ -7,7 +7,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"unicode"
+
+	"github.com/iancoleman/strcase"
 )
 
 const defaultTag = "env"
@@ -15,21 +16,50 @@ const defaultTag = "env"
 type PreProcessingGetEnvFunc func(string) string
 
 type Loader struct {
-	prefix     string
-	fieldNamer func(string) string
-	env        func(string) string
+	prefix, tag string
+	fieldNamer  func(string) string
+	env         func(string) string
 }
 
-func newLoader() *Loader {
+func defaultLoader() *Loader {
 	return &Loader{
-		env: os.Getenv,
+		fieldNamer: strcase.ToScreamingSnake,
+		env:        os.Getenv,
 	}
 }
 
 type Option func(*Loader)
 
+// WithPrefix sets the prefix for environment variable names
+func WithTag(tag string) Option {
+	return func(l *Loader) {
+		l.tag = tag
+	}
+}
+
+// WithPrefix sets the prefix for environment variable names
+func WithPrefix(prefix string) Option {
+	return func(l *Loader) {
+		l.prefix = prefix
+	}
+}
+
+// WithFieldNamer sets a custom field naming function
+func WithFieldNamer(namer func(string) string) Option {
+	return func(l *Loader) {
+		l.fieldNamer = namer
+	}
+}
+
+// WithEnv sets a custom environment variable lookup function
+func WithEnv(env func(string) string) Option {
+	return func(l *Loader) {
+		l.env = env
+	}
+}
+
 func Load(value any, opts ...Option) error {
-	loader := newLoader()
+	loader := defaultLoader()
 	for _, opt := range opts {
 		opt(loader)
 	}
@@ -41,21 +71,25 @@ func Load(value any, opts ...Option) error {
 // Loader loads a configuration struct from environment variables.
 // It supports nested structs and handles type conversion for basic types.
 // TODO: Remove params and replace with the With Pattern.
-func (l *Loader) Load(config any, customTag, prefix string) error {
-	// BUG: Make sure its a pointer
-	v := reflect.ValueOf(&config).Elem()
-	t := v.Type()
+func (l *Loader) Load(val any) error {
+	ptrValue := reflect.ValueOf(val)
+	if ptrValue.Kind() != reflect.Pointer {
+		return fmt.Errorf("Need a pointer to load values into. Got %T", val)
+	}
+	v := ptrValue.Elem()
+	println(v.String())
+	t := ptrValue.Type().Elem() // Get the type from the pointer type
+	println(t.String())
 
-	if err := l.loadFields(v, t); err != nil {
+	if err := l.loadFields(v, t, l.prefix); err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
-
 	return nil
 }
 
 // loadFields recursively processes struct fields and loads values from environment variables
 // TODO: Remove params and replace with the With Pattern.
-func (l *Loader) loadFields(v reflect.Value, t reflect.Type) error {
+func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := v.Field(i)
 		fieldType := t.Field(i)
@@ -71,28 +105,20 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type) error {
 			if newPrefix != "" {
 				newPrefix += "_"
 			}
-			newPrefix += convertNameIntoEnvNotation(fieldType.Name)
+			newPrefix += l.fieldNamer(fieldType.Name)
 
-			if err := loadFields(field, fieldType.Type, newPrefix, customTag, f); err != nil {
+			if err := l.loadFields(field, fieldType.Type, newPrefix); err != nil {
 				return fmt.Errorf("error loading nested struct %s: %w", fieldType.Name, err)
 			}
 			continue
 		}
 
-		// Check if customTag is empty
-		var tag string
-		if customTag != "" {
-			tag = customTag
-		} else {
-			tag = defaultTag
-		}
-
 		// Get environment variable name from tag or field name
 		var found bool
-		envName := fieldType.Tag.Get(f(tag))
+		envName := fieldType.Tag.Get(l.tag)
 		if envName == "" {
 			found = false
-			envName = convertNameIntoEnvNotation(fieldType.Name)
+			envName = l.fieldNamer(fieldType.Name)
 		} else {
 			found = true
 		}
@@ -106,7 +132,7 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type) error {
 		// Get environment variable value
 		// TODO: Omitempty? Standard across go
 		slog.Info("attempting to load field", slog.String("field_name", envName))
-		envValue := os.Getenv(envName)
+		envValue := l.env(envName)
 		if envValue == "" {
 			// Check if the field has a default value set
 			if field.IsZero() {
@@ -166,74 +192,4 @@ func setFieldValue(field reflect.Value, value string) error {
 		return fmt.Errorf("unsupported field type: %s", field.Kind())
 	}
 	return nil
-}
-
-// convertNameIntoEnvNotation converts a struct field name into an environment variable notation
-// e.g., DatabaseURL -> DATABASE_URL, OAuth2Token -> OAUTH2_TOKEN.
-func convertNameIntoEnvNotation(name string) string {
-	if name == "" {
-		return ""
-	}
-
-	var result strings.Builder
-	runes := []rune(name)
-
-	// Handle first character
-	result.WriteRune(unicode.ToUpper(runes[0]))
-
-	for i := 1; i < len(runes); i++ {
-		current := runes[i]
-
-		// Look ahead and behind
-		var next rune
-		if i+1 < len(runes) {
-			next = runes[i+1]
-		}
-		prev := runes[i-1]
-
-		// Conditions for adding underscore:
-		// 1. Current is uppercase and previous is lowercase (camelCase -> CAMEL_CASE)
-		// 2. Current is uppercase and next exists and is lowercase (URLEnd -> URL_END)
-		// 3. Current is number and previous is letter (OAuth2 -> OAUTH2)
-		// 4. Previous is number and current is uppercase (API2Token -> API2_TOKEN)
-		needsUnderscore := false
-
-		if unicode.IsUpper(current) {
-			// Handle transition from acronym to new word
-			// e.g., APIConfig -> API_CONFIG
-			if unicode.IsUpper(prev) && next != 0 && unicode.IsLower(next) {
-				needsUnderscore = true
-			}
-
-			// Handle transition from lowercase to uppercase
-			// e.g., someAPI -> SOME_API
-			if unicode.IsLower(prev) {
-				needsUnderscore = true
-			}
-		}
-
-		// Handle numbers
-		if unicode.IsNumber(current) && unicode.IsLetter(prev) {
-			if !unicode.IsNumber(prev) {
-				needsUnderscore = true
-			}
-		}
-		if unicode.IsLetter(current) && unicode.IsNumber(prev) {
-			if unicode.IsUpper(current) {
-				needsUnderscore = true
-			}
-		}
-
-		if needsUnderscore {
-			result.WriteRune('_')
-		}
-		result.WriteRune(unicode.ToUpper(current))
-	}
-
-	return result.String()
-}
-
-// NoPreProcessing is a noop operation.
-func NoPreProcessing(s string) string {
-	return s
 }
