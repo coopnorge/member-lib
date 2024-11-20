@@ -17,7 +17,7 @@ type PreProcessingGetEnvFunc func(string) string
 // Loader loads a configuration struct from environment variables.
 // It supports nested structs and handles type conversion for basic types.
 // TODO: Remove params and replace with the With Pattern.
-func Loader[T any](customTag string, prefix string, f PreProcessingGetEnvFunc) (*T, error) {
+func Loader[T any](customTag, prefix string, f PreProcessingGetEnvFunc) (*T, error) {
 	var config T
 	v := reflect.ValueOf(&config).Elem()
 	t := v.Type()
@@ -31,7 +31,7 @@ func Loader[T any](customTag string, prefix string, f PreProcessingGetEnvFunc) (
 
 // loadFields recursively processes struct fields and loads values from environment variables
 // TODO: Remove params and replace with the With Pattern.
-func loadFields(v reflect.Value, t reflect.Type, prefix string, customTag string, f PreProcessingGetEnvFunc) error {
+func loadFields(v reflect.Value, t reflect.Type, prefix, customTag string, f PreProcessingGetEnvFunc) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := v.Field(i)
 		fieldType := t.Field(i)
