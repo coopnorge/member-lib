@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"strings"
+
 	"github.com/DataDog/datadog-go/v5/statsd"
 	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	"math"
-	"strings"
 )
 
 var _ sdkmetric.Exporter = *(*ddMetricExporter)(nil)
