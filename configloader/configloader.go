@@ -83,7 +83,7 @@ func (l *Loader) Load(val any) error {
 	return nil
 }
 
-// loadFields recursively processes struct fields and loads values from environment variables
+// loadFields recursively processes struct fields and loads values from environment variables.
 func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := v.Field(i)
