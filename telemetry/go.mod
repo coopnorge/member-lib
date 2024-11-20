@@ -1,6 +1,6 @@
 module github.com/coopnorge/member-lib/pkg/telemetry
 
-go 1.23.1
+go 1.23
 
 require (
 	github.com/DataDog/datadog-go/v5 v5.5.0
