@@ -11,10 +11,6 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-const defaultTag = "env"
-
-type PreProcessingGetEnvFunc func(string) string
-
 type Loader struct {
 	prefix, tag string
 	fieldNamer  func(string) string
@@ -30,28 +26,28 @@ func defaultLoader() *Loader {
 
 type Option func(*Loader)
 
-// WithPrefix sets the prefix for environment variable names
+// WithPrefix sets the prefix for environment variable names.
 func WithTag(tag string) Option {
 	return func(l *Loader) {
 		l.tag = tag
 	}
 }
 
-// WithPrefix sets the prefix for environment variable names
+// WithPrefix sets the prefix for environment variable names.
 func WithPrefix(prefix string) Option {
 	return func(l *Loader) {
 		l.prefix = prefix
 	}
 }
 
-// WithFieldNamer sets a custom field naming function
+// WithFieldNamer sets a custom field naming function.
 func WithFieldNamer(namer func(string) string) Option {
 	return func(l *Loader) {
 		l.fieldNamer = namer
 	}
 }
 
-// WithEnv sets a custom environment variable lookup function
+// WithEnv sets a custom environment variable lookup function.
 func WithEnv(env func(string) string) Option {
 	return func(l *Loader) {
 		l.env = env
@@ -74,7 +70,7 @@ func Load(value any, opts ...Option) error {
 func (l *Loader) Load(val any) error {
 	ptrValue := reflect.ValueOf(val)
 	if ptrValue.Kind() != reflect.Pointer {
-		return fmt.Errorf("Need a pointer to load values into. Got %T", val)
+		return fmt.Errorf("need a pointer to load values into. Got %T", val)
 	}
 	v := ptrValue.Elem()
 	println(v.String())
@@ -88,7 +84,6 @@ func (l *Loader) Load(val any) error {
 }
 
 // loadFields recursively processes struct fields and loads values from environment variables
-// TODO: Remove params and replace with the With Pattern.
 func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := v.Field(i)
@@ -130,7 +125,6 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 		}
 
 		// Get environment variable value
-		// TODO: Omitempty? Standard across go
 		slog.Info("attempting to load field", slog.String("field_name", envName))
 		envValue := l.env(envName)
 		if envValue == "" {
