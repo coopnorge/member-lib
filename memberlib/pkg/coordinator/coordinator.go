@@ -24,7 +24,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coopnorge/member-lib/pkg/coordinator/process"
+	"github.com/coopnorge/member-lib/memberlib/pkg/coordinator/process"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 )
