@@ -1,49 +1,54 @@
 name: "Golang CI"
-env:
-  TEST_PATHS: "./configloader/... pkg/..."
-
 on:
   push: { }
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  matrix-prep:
+    runs-on: ubuntu-latest
+    outputs:
+      paths: '["configloader", "pkg"]'
+    steps:
+      - run: echo "Preparing matrix"
+
   golang-ci:
+    needs: matrix-prep
     name: "Lint Modules"
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        lint_path: ["configloader", "pkg"]
+        path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.22"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60.3
-          working-directory: ${{ matrix.lint_path }}
+          working-directory: ${{ matrix.path }}
           args: --out-format line-number --color never -v ./...
 
   gotest:
+    needs: matrix-prep
     name: "Test Modules"
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test_path: ["./configloader", "./pkg"]
+        path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
-      - name: Run tests with coverage in ${{ matrix.test_path }}
+          go-version: "1.22"
+      - name: Run tests with coverage
         run: |
-          cd ${{ matrix.test_path }}
+          cd ${{ matrix.path }}
           go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
   build:
