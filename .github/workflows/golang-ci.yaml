@@ -9,7 +9,7 @@ jobs:
   matrix-prep:
     runs-on: ubuntu-latest
     outputs:
-      paths: '["configloader", "pkg"]'
+      paths: '["pkg"]'
     steps:
       - run: echo "Preparing matrix"
 
