@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/DataDog/datadog-go/v5/statsd"
@@ -204,13 +203,9 @@ func (d ddMetricExporter) histogramFloat64(name string, p metricdata.HistogramDa
 	if v, ok := p.Max.Value(); ok {
 		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.max", name), v, toTags(tags, p.Attributes.ToSlice()), 1.0))
 	}
-	for i := 0; i < len(p.Bounds); i += 2 {
+	for i := 0; i < len(p.Bounds)-1; i++ {
 		var lower, upper float64
-		if i+1 < len(p.Bounds) {
-			lower, upper = p.Bounds[i], p.Bounds[i+1]
-		} else {
-			lower, upper = p.Bounds[i], math.Inf(1)
-		}
+		lower, upper = p.Bounds[i], p.Bounds[i+1]
 		bounds := []attribute.KeyValue{
 			attribute.String("lower_bound", fmt.Sprintf("%f", lower)),
 			attribute.String("upper_bound", fmt.Sprintf("%f", upper)),
@@ -229,13 +224,9 @@ func (d ddMetricExporter) histogramInt64(name string, p metricdata.HistogramData
 	if v, ok := p.Max.Value(); ok {
 		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.max", name), float64(v), toTags(tags, p.Attributes.ToSlice()), 1.0))
 	}
-	for i := 0; i < len(p.Bounds); i += 2 {
+	for i := 0; i < len(p.Bounds)-1; i++ {
 		var lower, upper float64
-		if i+1 < len(p.Bounds) {
-			lower, upper = p.Bounds[i], p.Bounds[i+1]
-		} else {
-			lower, upper = p.Bounds[i], math.Inf(1)
-		}
+		lower, upper = p.Bounds[i], p.Bounds[i+1]
 		bounds := []attribute.KeyValue{
 			attribute.String("lower_bound", fmt.Sprintf("%f", lower)),
 			attribute.String("upper_bound", fmt.Sprintf("%f", upper)),
