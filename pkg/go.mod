@@ -1,4 +1,4 @@
-module github.com/coopnorge/member-lib
+module github.com/coopnorge/member-lib/pkg
 
 go 1.23
 

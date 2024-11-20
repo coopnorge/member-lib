@@ -1,8 +1,8 @@
 # Member-Lib
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/coopnorge/member-lib.svg)](https://pkg.go.dev/github.com/coopnorge/member-lib)
-[![CI](https://github.com/coopnorge/member-lib/actions/workflows/golang-ci.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/golang-ci.yaml)
-[![Security](https://github.com/coopnorge/member-lib/actions/workflows/security-scan.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/actions/workflows/security-scan.yaml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/coopnorge/member-lib/pkg.svg)](https://pkg.go.dev/github.com/coopnorge/member-lib/pkg)
+[![CI](https://github.com/coopnorge/member-lib/pkg/actions/workflows/golang-ci.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/pkg/actions/workflows/golang-ci.yaml)
+[![Security](https://github.com/coopnorge/member-lib/pkg/actions/workflows/security-scan.yaml/badge.svg?branch=main)](https://github.com/coopnorge/member-lib/pkg/actions/workflows/security-scan.yaml)
 
 ## Overview
 
@@ -17,7 +17,7 @@ applicable across a variety of use cases.
 To install the library, use:
 
 ```bash
-go get github.com/coopnorge/member-lib/{package_of_interest}
+go get github.com/coopnorge/member-lib/pkg/{package_of_interest}
 ```
 
 ### Usage
