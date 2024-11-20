@@ -16,7 +16,7 @@ type PreProcessingGetEnvFunc func(string) string
 
 // Loader loads a configuration struct from environment variables.
 // It supports nested structs and handles type conversion for basic types.
-// TODO: Remove params and replace with the With Pattern
+// TODO: Remove params and replace with the With Pattern.
 func Loader[T any](customTag string, prefix string, f PreProcessingGetEnvFunc) (*T, error) {
 	var config T
 	v := reflect.ValueOf(&config).Elem()
@@ -30,7 +30,7 @@ func Loader[T any](customTag string, prefix string, f PreProcessingGetEnvFunc) (
 }
 
 // loadFields recursively processes struct fields and loads values from environment variables
-// TODO: Remove params and replace with the With Pattern
+// TODO: Remove params and replace with the With Pattern.
 func loadFields(v reflect.Value, t reflect.Type, prefix string, customTag string, f PreProcessingGetEnvFunc) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := v.Field(i)
@@ -99,7 +99,7 @@ func loadFields(v reflect.Value, t reflect.Type, prefix string, customTag string
 	return nil
 }
 
-// setFieldValue converts string value from environment variable to appropriate field type
+// setFieldValue converts string value from environment variable to appropriate field type.
 func setFieldValue(field reflect.Value, value string) error {
 	switch field.Kind() {
 	case reflect.String:
@@ -145,7 +145,7 @@ func setFieldValue(field reflect.Value, value string) error {
 }
 
 // convertNameIntoEnvNotation converts a struct field name into an environment variable notation
-// e.g., DatabaseURL -> DATABASE_URL, OAuth2Token -> OAUTH2_TOKEN
+// e.g., DatabaseURL -> DATABASE_URL, OAuth2Token -> OAUTH2_TOKEN.
 func convertNameIntoEnvNotation(name string) string {
 	if name == "" {
 		return ""
@@ -209,7 +209,7 @@ func convertNameIntoEnvNotation(name string) string {
 	return result.String()
 }
 
-// NoPreProcessing is a noop operation
+// NoPreProcessing is a noop operation.
 func NoPreProcessing(s string) string {
 	return s
 }
