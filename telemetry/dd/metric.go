@@ -240,7 +240,7 @@ func (d ddMetricExporter) histogramInt64(name string, p metricdata.HistogramData
 			attribute.String("lower_bound", fmt.Sprintf("%f", lower)),
 			attribute.String("upper_bound", fmt.Sprintf("%f", upper)),
 		}
-		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.bucket", name), int64(p.BucketCounts[i]), toTags(tags, p.Attributes.ToSlice(), bounds), 1.0))
+		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.bucket", name), safeUintToInt(p.BucketCounts[i]), toTags(tags, p.Attributes.ToSlice(), bounds), 1.0))
 	}
 	return err
 }
