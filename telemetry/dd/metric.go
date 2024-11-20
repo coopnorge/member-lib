@@ -15,7 +15,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
-var _ sdkmetric.Exporter = *(*ddMetricExporter)(nil)
+var _ sdkmetric.Exporter = &ddMetricExporter{}
 
 type ddMetricExporter struct {
 	client *statsd.Client
