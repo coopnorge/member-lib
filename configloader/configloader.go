@@ -123,14 +123,6 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			envName = prefix + "_" + envName
 		}
 
-		// if envValue == "" {
-		// 	// Check if the field has a default value set
-		// 	if field.IsZero() {
-		// 		return fmt.Errorf("environment variable not set: %s", envName)
-		// 	}
-		// 	continue // Keep default value if env var is not set
-		// }
-
 		if err := setFieldValue(field, l.env(envName)); err != nil {
 			return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
 		}
