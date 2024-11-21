@@ -2,7 +2,6 @@ package configloader
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"reflect"
 	"strconv"
@@ -13,21 +12,25 @@ import (
 
 type Loader struct {
 	prefix, tag string
-	fieldNamer  func(string) string
-	env         func(string) string
+
+	// Type of conversion the struct field will take. Default is SnakeCase.
+	fieldConversion func(string) string
+
+	// Custom GetEnv function.
+	env func(string) string
 }
 
 func defaultLoader() *Loader {
 	return &Loader{
-		fieldNamer: strcase.ToScreamingSnake,
-		env:        os.Getenv,
+		fieldConversion: strcase.ToScreamingSnake,
+		env:             os.Getenv,
 	}
 }
 
 type Option func(*Loader)
 
 // WithPrefix sets the prefix for environment variable names.
-func WithTag(tag string) Option {
+func WithNameTag(tag string) Option {
 	return func(l *Loader) {
 		l.tag = tag
 	}
@@ -37,13 +40,6 @@ func WithTag(tag string) Option {
 func WithPrefix(prefix string) Option {
 	return func(l *Loader) {
 		l.prefix = prefix
-	}
-}
-
-// WithFieldNamer sets a custom field naming function.
-func WithFieldNamer(namer func(string) string) Option {
-	return func(l *Loader) {
-		l.fieldNamer = namer
 	}
 }
 
@@ -60,22 +56,18 @@ func Load(value any, opts ...Option) error {
 		opt(loader)
 	}
 
-	// reflect.Type -> Pass it to load
 	return loader.Load(value)
 }
 
 // Loader loads a configuration struct from environment variables.
 // It supports nested structs and handles type conversion for basic types.
-// TODO: Remove params and replace with the With Pattern.
 func (l *Loader) Load(val any) error {
 	ptrValue := reflect.ValueOf(val)
-	if ptrValue.Kind() != reflect.Pointer {
-		return fmt.Errorf("need a pointer to load values into. Got %T", val)
+	if ptrValue.Kind() != reflect.Pointer || ptrValue.IsNil() {
+		return fmt.Errorf("need a pointer to load values into. Got %s", reflect.TypeOf(val).String())
 	}
 	v := ptrValue.Elem()
-	println(v.String())
-	t := ptrValue.Type().Elem() // Get the type from the pointer type
-	println(t.String())
+	t := ptrValue.Type().Elem()
 
 	if err := l.loadFields(v, t, l.prefix); err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
@@ -85,22 +77,27 @@ func (l *Loader) Load(val any) error {
 
 // loadFields recursively processes struct fields and loads values from environment variables.
 func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) error {
+	if !v.IsValid() {
+		return fmt.Errorf("struct should be an initialized pointer")
+	}
+
 	for i := 0; i < t.NumField(); i++ {
 		field := v.Field(i)
 		fieldType := t.Field(i)
 
 		// Skip unexported fields
-		if !field.CanSet() {
+		if !field.CanSet() || !field.IsValid() {
 			continue
 		}
 
+		convertedFName := l.fieldConversion(fieldType.Name)
 		// Handle nested structs
 		if field.Kind() == reflect.Struct {
 			newPrefix := prefix
 			if newPrefix != "" {
 				newPrefix += "_"
 			}
-			newPrefix += l.fieldNamer(fieldType.Name)
+			newPrefix += convertedFName
 
 			if err := l.loadFields(field, fieldType.Type, newPrefix); err != nil {
 				return fmt.Errorf("error loading nested struct %s: %w", fieldType.Name, err)
@@ -113,8 +110,10 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 		envName := fieldType.Tag.Get(l.tag)
 		if envName == "" {
 			found = false
-			envName = l.fieldNamer(fieldType.Name)
+			envName = convertedFName
 		} else {
+			// account for multi-value tags
+			envName = strings.Split(envName, ",")[0]
 			found = true
 		}
 
@@ -124,18 +123,15 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			envName = prefix + "_" + envName
 		}
 
-		// Get environment variable value
-		slog.Info("attempting to load field", slog.String("field_name", envName))
-		envValue := l.env(envName)
-		if envValue == "" {
-			// Check if the field has a default value set
-			if field.IsZero() {
-				return fmt.Errorf("environment variable not set: %s", envName)
-			}
-			continue // Keep default value if env var is not set
-		}
+		// if envValue == "" {
+		// 	// Check if the field has a default value set
+		// 	if field.IsZero() {
+		// 		return fmt.Errorf("environment variable not set: %s", envName)
+		// 	}
+		// 	continue // Keep default value if env var is not set
+		// }
 
-		if err := setFieldValue(field, envValue); err != nil {
+		if err := setFieldValue(field, l.env(envName)); err != nil {
 			return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
 		}
 	}

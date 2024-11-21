@@ -2,7 +2,10 @@ package configloader
 
 import (
 	"os"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type DatabaseConfig struct {
@@ -21,7 +24,7 @@ type AppConfig struct {
 	Timeout     float64
 }
 
-func TestLoader(t *testing.T) {
+func TestLoad(t *testing.T) {
 	// Setup test cases
 	tests := []struct {
 		name    string
@@ -89,7 +92,7 @@ func TestLoader(t *testing.T) {
 
 			// Run loader
 			got := &AppConfig{}
-			err := Load(got, WithTag("env"))
+			err := Load(got, WithNameTag("env"))
 			// Check error
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Loader() error = %v, wantErr %v", err, tt.wantErr)
@@ -138,25 +141,49 @@ func TestLoader(t *testing.T) {
 	}
 }
 
-// func TestConvertNameIntoEnvNotation(t *testing.T) {
-// 	tests := []struct {
-// 		name     string
-// 		input    string
-// 		expected string
-// 	}{
-// 		{"simple", "Port", "PORT"},
-// 		{"camelCase", "databaseHost", "DATABASE_HOST"},
-// 		{"PascalCase", "DatabaseHost", "DATABASE_HOST"},
-// 		{"with numbers", "OauthToken", "OAUTH_TOKEN"},
-// 		{"complex", "RESTAPIEndpoint", "RESTAPI_ENDPOINT"},
-// 	}
-//
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			result := convertNameIntoEnvNotation(tt.input)
-// 			if result != tt.expected {
-// 				t.Errorf("convertNameIntoEnvNotation(%q) = %q, want %q", tt.input, result, tt.expected)
-// 			}
-// 		})
-// 	}
-// }
+func TestFails_OnConfigNotBeingStruct(t *testing.T) {
+	conf := AppConfig{}
+	assert.Error(t, Load(conf), "config should fail as it's not a pointer")
+}
+
+type JsonExm struct {
+	Name string `json:"name"`
+}
+
+func TestNameJson(t *testing.T) {
+	t.Setenv("name", "hehe")
+	var conf JsonExm
+	err := Load(&conf, WithNameTag("json"))
+	assert.NoError(t, err, "got an erro")
+	assert.Equal(t, "hehe", conf.Name, "name is not the same as hehe")
+}
+
+type ComplexConfig struct {
+	Env     string `mapstructure:"dd_env" json:"dd_env,omitempty"`
+	Service string `mapstructure:"dd_service" json:"dd_service,omitempty"`
+	// Field Name is not the same as mapstructure tag val
+	ServiceVersion       string `mapstructure:"dd_version" json:"dd_service_version,omitempty"`
+	DSD                  string `mapstructure:"dd_dogstatsd_url" json:"dd_dsd,omitempty"`
+	APM                  string `mapstructure:"dd_trace_agent_url" json:"dd_apm,omitempty"`
+	EnableExtraProfiling bool   `mapstructure:"dd_enable_extra_profiling" json:"dd_enable_extra_profiling,omitempty"`
+}
+
+func CustomGetenv(val string) string {
+	return os.Getenv(strings.ToUpper(val))
+}
+
+func TestComplexLoading(t *testing.T) {
+	t.Setenv("DD_ENV", "prod")
+	t.Setenv("DD_VERSION", "1.0.0")
+	t.Setenv("DD_DOGSTATSD_URL", "hehe://someproto")
+	t.Setenv("DD_ENABLE_EXTRA_PROFILING", "TRUE")
+
+	var conf ComplexConfig
+
+	err := Load(&conf, WithNameTag("mapstructure"), WithEnv(CustomGetenv))
+	assert.NoError(t, err, "Loading should not fail")
+	assert.Equal(t, "prod", conf.Env, "Env should be prod")
+	assert.Equal(t, "1.0.0", conf.ServiceVersion)
+	assert.Equal(t, "", conf.Service, "Service should be zero value")
+	assert.Equal(t, "hehe://someproto", conf.DSD, "Dsd was not picked up ")
+}
