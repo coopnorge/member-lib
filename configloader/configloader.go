@@ -18,16 +18,29 @@ type Loader struct {
 
 	// Custom GetEnv function.
 	env func(string) string
+
+	// Map of type handlers where key is reflect.Type and value is the handler function
+	handlers map[reflect.Type]TypeHandlerFunc
 }
 
 func defaultLoader() *Loader {
 	return &Loader{
+		handlers:        make(map[reflect.Type]TypeHandlerFunc, 0),
 		fieldConversion: strcase.ToScreamingSnake,
 		env:             os.Getenv,
 	}
 }
 
 type Option func(*Loader)
+
+type TypeHandlerFunc func(string) (any, error)
+
+func WithTypeHandler[T any](f TypeHandlerFunc) Option {
+	return func(l *Loader) {
+		var zero T
+		l.handlers[reflect.TypeOf(zero)] = f
+	}
+}
 
 // WithNameTag sets the prefix for environment variable names.
 func WithNameTag(tag string) Option {
@@ -76,6 +89,7 @@ func (l *Loader) Load(val any) error {
 }
 
 // loadFields recursively processes struct fields and loads values from environment variables.
+// nolint:gocognit // Necessary complexity. High IQ function.
 func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) error {
 	if !v.IsValid() {
 		return fmt.Errorf("struct should be an initialized pointer")
@@ -102,7 +116,6 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			}
 			// If it's a pointer to struct, process it
 			if field.Elem().Kind() == reflect.Struct {
-
 				newPrefix += convertedFName
 				if err := l.loadFields(field.Elem(), fieldType.Type.Elem(), newPrefix); err != nil {
 					return fmt.Errorf("error loading nested pointer struct %s: %w", fieldType.Name, err)
@@ -133,7 +146,7 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			envName = prefix + "_" + envName
 		}
 
-		if err := setFieldValue(field, l.env(envName)); err != nil {
+		if err := l.setFieldValue(field, l.env(envName)); err != nil {
 			return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
 		}
 	}
@@ -141,7 +154,25 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 }
 
 // setFieldValue converts string value from environment variable to appropriate field type.
-func setFieldValue(field reflect.Value, value string) error {
+// nolint:funlen // Switch statement makes this a lengthy func.
+func (l *Loader) setFieldValue(field reflect.Value, value string) error {
+	// skip if value is nil or empty
+	if value == "" {
+		return nil
+	}
+
+	// Override type if a specific handler was given.
+	// NOTE: Overrides of Complex Types masks could be picked up instead of the masked type.
+	f, ok := l.handlers[field.Type()]
+	if ok {
+		v, err := f(value)
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(v))
+		return nil
+	}
+
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(value)
@@ -166,6 +197,7 @@ func setFieldValue(field reflect.Value, value string) error {
 	case reflect.Bool:
 		val, err := strconv.ParseBool(value)
 		if err != nil {
+			// Let user know that Parsing is wrong
 			return err
 		}
 		field.SetBool(val)
@@ -174,7 +206,7 @@ func setFieldValue(field reflect.Value, value string) error {
 		elements := strings.Split(value, ",")
 		slice := reflect.MakeSlice(field.Type(), len(elements), len(elements))
 		for i, element := range elements {
-			if err := setFieldValue(slice.Index(i), strings.TrimSpace(element)); err != nil {
+			if err := l.setFieldValue(slice.Index(i), strings.TrimSpace(element)); err != nil {
 				return err
 			}
 		}

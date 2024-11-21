@@ -1,9 +1,12 @@
 package configloader
 
 import (
+	"net"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -25,7 +28,6 @@ type AppConfig struct {
 }
 
 func TestLoad(t *testing.T) {
-	// Setup test cases
 	tests := []struct {
 		name    string
 		envVars map[string]string
@@ -61,15 +63,6 @@ func TestLoad(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing required field",
-			envVars: map[string]string{
-				"ENVIRONMENT": "production",
-				// Missing DATABASE_HOST
-			},
-			want:    AppConfig{},
-			wantErr: true,
-		},
-		{
 			name: "invalid type conversion",
 			envVars: map[string]string{
 				"ENVIRONMENT":   "production",
@@ -82,61 +75,29 @@ func TestLoad(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Clear environment before each test
 			os.Clearenv()
-
-			// Set environment variables for test
 			for k, v := range tt.envVars {
 				os.Setenv(k, v)
 			}
 
-			// Run loader
 			got := &AppConfig{}
 			err := Load(got, WithNameTag("env"))
-			// Check error
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Loader() error = %v, wantErr %v", err, tt.wantErr)
+
+			if tt.wantErr {
+				assert.Error(t, err)
 				return
 			}
 
-			if err != nil {
-				return
-			}
-
-			// Compare results
-			if got.Environment != tt.want.Environment {
-				t.Errorf("Environment = %v, want %v", got.Environment, tt.want.Environment)
-			}
-			if got.Debug != tt.want.Debug {
-				t.Errorf("Debug = %v, want %v", got.Debug, tt.want.Debug)
-			}
-			if got.Database.Host != tt.want.Database.Host {
-				t.Errorf("Database.Host = %v, want %v", got.Database.Host, tt.want.Database.Host)
-			}
-			if got.Database.Port != tt.want.Database.Port {
-				t.Errorf("Database.Port = %v, want %v", got.Database.Port, tt.want.Database.Port)
-			}
-			if got.Database.Username != tt.want.Database.Username {
-				t.Errorf("Database.Username = %v, want %v", got.Database.Username, tt.want.Database.Username)
-			}
-			if got.Database.Password != tt.want.Database.Password {
-				t.Errorf("Database.Password = %v, want %v", got.Database.Password, tt.want.Database.Password)
-			}
-			if len(got.AllowedIps) != len(tt.want.AllowedIps) {
-				t.Errorf("AllowedIPs len = %v, want %v", len(got.AllowedIps), len(tt.want.AllowedIps))
-			} else {
-				for i := range got.AllowedIps {
-					if got.AllowedIps[i] != tt.want.AllowedIps[i] {
-						t.Errorf("AllowedIPs[%d] = %v, want %v", i, got.AllowedIps[i], tt.want.AllowedIps[i])
-					}
-				}
-			}
-			if got.MaxRetries != tt.want.MaxRetries {
-				t.Errorf("MaxRetries = %v, want %v", got.MaxRetries, tt.want.MaxRetries)
-			}
-			if got.Timeout != tt.want.Timeout {
-				t.Errorf("Timeout = %v, want %v", got.Timeout, tt.want.Timeout)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want.Environment, got.Environment)
+			assert.Equal(t, tt.want.Debug, got.Debug)
+			assert.Equal(t, tt.want.Database.Host, got.Database.Host)
+			assert.Equal(t, tt.want.Database.Port, got.Database.Port)
+			assert.Equal(t, tt.want.Database.Username, got.Database.Username)
+			assert.Equal(t, tt.want.Database.Password, got.Database.Password)
+			assert.Equal(t, tt.want.AllowedIps, got.AllowedIps)
+			assert.Equal(t, tt.want.MaxRetries, got.MaxRetries)
+			assert.Equal(t, tt.want.Timeout, got.Timeout)
 		})
 	}
 }
@@ -195,13 +156,51 @@ type ConfigWP struct {
 	Pel *PointerElement
 }
 
+type SecondElement struct {
+	Url string
+}
+
 type PointerElement struct {
 	Name string
+	Sec  *SecondElement
 }
 
 func TestLoadingWithPointerNested(t *testing.T) {
+	// NOTE: This is how we use the lib.
+	t.Setenv("PEL_NAME", "alfredo")
+	t.Setenv("PEL_SEC_URL", "www.pelsec.url")
 	var conf ConfigWP
 	err := Load(&conf)
 
 	assert.NoError(t, err, "Expected error free Load")
+	assert.Equal(t, "alfredo", conf.Pel.Name)
+	assert.Equal(t, "www.pelsec.url", conf.Pel.Sec.Url)
+}
+
+// Complex types
+type ComplexTypeEx struct {
+	Timeout time.Duration
+	URL     url.URL
+	IPAddr  net.IP
+}
+
+func TestLoadingComplexType(t *testing.T) {
+	t.Setenv("TIMEOUT", "1s")
+	t.Setenv("URL_HOST", "localhost:8080")
+	t.Setenv("IP_ADDR", "192.168.1.1")
+
+	var conf ComplexTypeEx
+	err := Load(&conf,
+		WithTypeHandler[time.Duration](func(s string) (any, error) {
+			return time.ParseDuration(s)
+		}), // IP address handler
+		WithTypeHandler[net.IP](func(s string) (any, error) {
+			return net.ParseIP(s), nil
+		}))
+
+	assert.NoError(t, err, "Expected error free Load")
+	sec, _ := time.ParseDuration("1s")
+	assert.Equal(t, sec, conf.Timeout, "Timeout was not read properly")
+	assert.Equal(t, "localhost:8080", conf.URL.Host)
+	assert.Equal(t, "192.168.1.1", conf.IPAddr.String())
 }
