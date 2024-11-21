@@ -1,4 +1,4 @@
-module github.com/coopnorge/member-lib/pkg/telemetry
+module github.com/coopnorge/member-lib/telemetry
 
 go 1.23
 
