@@ -147,15 +147,18 @@ func TestFails_OnConfigNotBeingStruct(t *testing.T) {
 }
 
 type JsonExm struct {
-	Name string `json:"name"`
+	Name  string `json:"name"`
+	Split string `json:"split,omitempty"`
 }
 
 func TestNameJson(t *testing.T) {
 	t.Setenv("name", "hehe")
+	t.Setenv("split", "splitval")
 	var conf JsonExm
 	err := Load(&conf, WithNameTag("json"))
 	assert.NoError(t, err, "Error should be nil")
 	assert.Equal(t, "hehe", conf.Name, "name is not the same as hehe")
+	assert.Equal(t, "splitval", conf.Split, "split is incorrenclty read")
 }
 
 type ComplexConfig struct {
