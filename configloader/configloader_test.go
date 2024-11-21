@@ -190,3 +190,18 @@ func TestComplexLoading(t *testing.T) {
 	assert.Equal(t, "", conf.Service, "Service should be zero value")
 	assert.Equal(t, "hehe://someproto", conf.DSD, "Dsd was not picked up ")
 }
+
+type ConfigWP struct {
+	Pel *PointerElement
+}
+
+type PointerElement struct {
+	Name string
+}
+
+func TestLoadingWithPointerNested(t *testing.T) {
+	var conf ConfigWP
+	err := Load(&conf)
+
+	assert.NoError(t, err, "Expected error free Load")
+}
