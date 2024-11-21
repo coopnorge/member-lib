@@ -9,9 +9,7 @@ jobs:
   matrix-prep:
     runs-on: ubuntu-latest
     outputs:
-      paths: '["configloader","pkg",
-      "telemetry"]'
-      paths: '["pkg", "telemetry"]'
+      paths: '["configloader","pkg", "telemetry"]'
     steps:
       - run: echo "Preparing matrix"
 
