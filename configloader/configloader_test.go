@@ -154,7 +154,7 @@ func TestNameJson(t *testing.T) {
 	t.Setenv("name", "hehe")
 	var conf JsonExm
 	err := Load(&conf, WithNameTag("json"))
-	assert.NoError(t, err, "got an erro")
+	assert.NoError(t, err, "Error should be nil")
 	assert.Equal(t, "hehe", conf.Name, "name is not the same as hehe")
 }
 

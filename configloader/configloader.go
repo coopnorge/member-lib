@@ -59,7 +59,7 @@ func Load(value any, opts ...Option) error {
 	return loader.Load(value)
 }
 
-// Loader loads a configuration struct from environment variables.
+// Load loads a configuration struct from environment variables.
 // It supports nested structs and handles type conversion for basic types.
 func (l *Loader) Load(val any) error {
 	ptrValue := reflect.ValueOf(val)
