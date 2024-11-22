@@ -11,23 +11,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type DatabaseConfig struct {
-	Host     string
-	Port     int
-	Username string `env:"DATABASE_USER"`
-	Password string
-}
-
-type AppConfig struct {
-	Environment string
-	Debug       bool
-	Database    DatabaseConfig
-	AllowedIps  []string
-	MaxRetries  int
-	Timeout     float64
-}
-
 func TestLoad(t *testing.T) {
+	type DatabaseConfig struct {
+		Host     string
+		Port     int
+		Username string `env:"DATABASE_USER"`
+		Password string
+	}
+	type AppConfig struct {
+		Environment string
+		Debug       bool
+		Database    DatabaseConfig
+		AllowedIps  []string
+		MaxRetries  int
+		Timeout     float64
+	}
+
 	tests := []struct {
 		name    string
 		envVars map[string]string
@@ -103,19 +102,24 @@ func TestLoad(t *testing.T) {
 }
 
 func TestFails_OnConfigNotBeingStruct(t *testing.T) {
+	type AppConfig struct {
+		Name string
+	}
 	conf := AppConfig{}
 	assert.Error(t, Load(conf), "config should fail as it's not a pointer")
 }
 
-type JsonExm struct {
-	Name  string `json:"name"`
-	Split string `json:"split,omitempty"`
-}
-
 func TestNameJson(t *testing.T) {
+	type JsonExm struct {
+		Name  string `json:"name"`
+		Split string `json:"split,omitempty"`
+	}
+
 	t.Setenv("name", "hehe")
 	t.Setenv("split", "splitval")
+
 	var conf JsonExm
+
 	err := Load(&conf, WithNameTag("json"))
 	assert.NoError(t, err, "Error should be nil")
 	assert.Equal(t, "hehe", conf.Name, "name is not the same as hehe")
@@ -152,20 +156,20 @@ func TestComplexLoading(t *testing.T) {
 	assert.Equal(t, "hehe://someproto", conf.DSD, "Dsd was not picked up ")
 }
 
-type ConfigWP struct {
-	Pel *PointerElement
-}
-
-type SecondElement struct {
-	Url string
-}
-
-type PointerElement struct {
-	Name string
-	Sec  *SecondElement
-}
-
 func TestLoadingWithPointerNested(t *testing.T) {
+	type SecondElement struct {
+		Url string
+	}
+
+	type PointerElement struct {
+		Name string
+		Sec  *SecondElement
+	}
+
+	type ConfigWP struct {
+		Pel *PointerElement
+	}
+
 	// NOTE: This is how we use the lib.
 	t.Setenv("PEL_NAME", "alfredo")
 	t.Setenv("PEL_SEC_URL", "www.pelsec.url")
@@ -177,14 +181,14 @@ func TestLoadingWithPointerNested(t *testing.T) {
 	assert.Equal(t, "www.pelsec.url", conf.Pel.Sec.Url)
 }
 
-// Complex types
-type ComplexTypeEx struct {
-	Timeout time.Duration
-	URL     url.URL
-	IPAddr  net.IP
-}
-
 func TestLoadingComplexType(t *testing.T) {
+	// Complex types
+	type ComplexTypeEx struct {
+		Timeout time.Duration
+		URL     url.URL
+		IPAddr  net.IP
+	}
+
 	t.Setenv("TIMEOUT", "1s")
 	t.Setenv("URL_HOST", "localhost:8080")
 	t.Setenv("IP_ADDR", "192.168.1.1")
