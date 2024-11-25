@@ -20,12 +20,12 @@ type Loader struct {
 	env func(string) string
 
 	// Map of type handlers where key is reflect.Type and value is the handler function
-	handlers map[reflect.Type]TypeHandlerFunc
+	handlers map[reflect.Type]func(string) (any, error)
 }
 
 func defaultLoader() *Loader {
 	return &Loader{
-		handlers:        make(map[reflect.Type]TypeHandlerFunc, 0),
+		handlers:        make(map[reflect.Type]func(string) (any, error), 0),
 		fieldConversion: strcase.ToScreamingSnake,
 		env:             os.Getenv,
 	}
@@ -33,12 +33,12 @@ func defaultLoader() *Loader {
 
 type Option func(*Loader)
 
-type TypeHandlerFunc func(string) (any, error)
-
-func WithTypeHandler[T any](f TypeHandlerFunc) Option {
+func WithTypeHandler[T any](f func(string) (T, error)) Option {
 	return func(l *Loader) {
 		var zero T
-		l.handlers[reflect.TypeOf(zero)] = f
+		l.handlers[reflect.TypeOf(zero)] = func(value string) (any, error) {
+			return f(value)
+		}
 	}
 }
 
