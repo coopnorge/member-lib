@@ -24,11 +24,15 @@ type Loader struct {
 }
 
 func defaultLoader() *Loader {
-	return &Loader{
+	l := &Loader{
 		handlers:        make(map[reflect.Type]func(string) (any, error), 0),
 		fieldConversion: strcase.ToScreamingSnake,
 		env:             os.Getenv,
 	}
+	for _, opt := range defaultTypeHandlers {
+		opt(l)
+	}
+	return l
 }
 
 type Option func(*Loader)
