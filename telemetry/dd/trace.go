@@ -80,10 +80,12 @@ func (e *ddTraceExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOn
 				}
 			}
 			ddSpan.SetTag(ext.ErrorMsg, status.Description)
-			finishOpts = append(finishOpts, tracer.WithError(
-				errors.New(status.Description),
-			))
-			finishOpts = append(finishOpts, tracer.NoDebugStack())
+			finishOpts = append(finishOpts,
+				tracer.WithError(
+					errors.New(status.Description),
+				),
+				tracer.NoDebugStack(),
+			)
 		}
 		ddSpan.Finish(finishOpts...)
 	}

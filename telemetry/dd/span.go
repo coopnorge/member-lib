@@ -19,7 +19,7 @@ func getParent(span trace.ReadOnlySpan) ddtrace.SpanContextW3C {
 
 var _ ddtrace.SpanContextW3C = &ctxWrapper{}
 
-// ctxWrapper converts open telemetry span context to ddtrace.SpanContextW3C
+// ctxWrapper converts open telemetry span context to ddtrace.SpanContextW3C.
 type ctxWrapper struct {
 	otelCtx trace2.SpanContext
 }
