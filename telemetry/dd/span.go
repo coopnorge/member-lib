@@ -2,6 +2,7 @@ package dd
 
 import (
 	"encoding/binary"
+
 	"go.opentelemetry.io/otel/sdk/trace"
 	trace2 "go.opentelemetry.io/otel/trace"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace"

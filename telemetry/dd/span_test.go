@@ -2,10 +2,11 @@ package dd
 
 import (
 	"encoding/hex"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
-	"testing"
 )
 
 func TestCtxWrapper(t *testing.T) {
