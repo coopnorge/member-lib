@@ -2,13 +2,14 @@ package configloader
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/require"
 	"net"
 	"net/url"
 	"os"
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +20,8 @@ func runTypeHandlerTest[T any](t *testing.T, tests []struct {
 	input     string
 	expected  T
 	expectErr assert.ErrorAssertionFunc
-}) {
+},
+) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := os.Setenv("VAL", tt.input)
@@ -38,7 +40,6 @@ func runTypeHandlerTest[T any](t *testing.T, tests []struct {
 func mustParseCIDR(s string) *net.IPNet {
 	_, network, err := net.ParseCIDR(s)
 	if err != nil {
-
 	}
 	return network
 }
@@ -97,6 +98,14 @@ func TestIPHandler(t *testing.T) {
 	runTypeHandlerTest(t, tests)
 }
 
+func mustParseUrl(val string) *url.URL {
+	v, err := url.Parse(val)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 func TestURLHandler(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -107,7 +116,7 @@ func TestURLHandler(t *testing.T) {
 		{
 			name:      "Valid URL",
 			input:     "https://example.com",
-			expected:  &url.URL{Scheme: "https", Host: "example.com"},
+			expected:  mustParseUrl("https://example.com"),
 			expectErr: assert.NoError,
 		},
 		{
@@ -234,7 +243,6 @@ func TestCIDRHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 		})
 	}
 
