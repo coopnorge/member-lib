@@ -1,3 +1,4 @@
+// nolint:unlambda // Explcitiness is good.
 package configloader
 
 import (
