@@ -1,4 +1,4 @@
-// nolint:unlambda // Explcitiness is good.
+//nolint:gocritic // Explcitiness is good.
 package configloader
 
 import (
@@ -16,6 +16,7 @@ var defaultTypeHandlers = []Option{
 		return time.ParseDuration(val)
 	}),
 
+	// nolint:unlambda // Explcitiness is good.
 	WithTypeHandler(func(val string) (net.IP, error) {
 		ip := net.ParseIP(val)
 		if ip == nil {
