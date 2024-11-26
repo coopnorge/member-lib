@@ -20,25 +20,29 @@ type Loader struct {
 	env func(string) string
 
 	// Map of type handlers where key is reflect.Type and value is the handler function
-	handlers map[reflect.Type]TypeHandlerFunc
+	handlers map[reflect.Type]func(string) (any, error)
 }
 
 func defaultLoader() *Loader {
-	return &Loader{
-		handlers:        make(map[reflect.Type]TypeHandlerFunc, 0),
+	l := &Loader{
+		handlers:        make(map[reflect.Type]func(string) (any, error), 0),
 		fieldConversion: strcase.ToScreamingSnake,
 		env:             os.Getenv,
 	}
+	for _, opt := range defaultTypeHandlers {
+		opt(l)
+	}
+	return l
 }
 
 type Option func(*Loader)
 
-type TypeHandlerFunc func(string) (any, error)
-
-func WithTypeHandler[T any](f TypeHandlerFunc) Option {
+func WithTypeHandler[T any](f func(string) (T, error)) Option {
 	return func(l *Loader) {
 		var zero T
-		l.handlers[reflect.TypeOf(zero)] = f
+		l.handlers[reflect.TypeOf(zero)] = func(value string) (any, error) {
+			return f(value)
+		}
 	}
 }
 
@@ -108,30 +112,6 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 		}
 		convertedFName := l.fieldConversion(fieldType.Name)
 
-		// Handle pointers to structs
-		if field.Kind() == reflect.Ptr {
-			// Initialize if nil
-			if field.IsNil() {
-				field.Set(reflect.New(field.Type().Elem()))
-			}
-			// If it's a pointer to struct, process it
-			if field.Elem().Kind() == reflect.Struct {
-				newPrefix += convertedFName
-				if err := l.loadFields(field.Elem(), fieldType.Type.Elem(), newPrefix); err != nil {
-					return fmt.Errorf("error loading nested pointer struct %s: %w", fieldType.Name, err)
-				}
-				continue
-			}
-		}
-
-		if field.Kind() == reflect.Struct {
-			newPrefix += convertedFName
-			if err := l.loadFields(field, fieldType.Type, newPrefix); err != nil {
-				return fmt.Errorf("error loading nested struct %s: %w", fieldType.Name, err)
-			}
-			continue
-		}
-
 		var found bool
 		envName := fieldType.Tag.Get(l.tag)
 		if envName == "" {
@@ -144,6 +124,40 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 
 		if prefix != "" && !found {
 			envName = prefix + "_" + envName
+		}
+
+		// At times, an explicit loading can be added, so we can route here
+		_, ok := l.handlers[fieldType.Type]
+		if ok {
+			if err := l.setFieldValue(field, l.env(envName)); err != nil {
+				return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
+			}
+			continue
+		}
+
+		// Handle pointers to structs
+		if field.Kind() == reflect.Ptr {
+			ptrType := field.Type().Elem()
+			// Initialize if nil
+			if field.IsNil() {
+				field.Set(reflect.New(ptrType))
+			}
+			// If it's a pointer to struct, process it
+			if field.Elem().Kind() == reflect.Struct {
+				newPrefix += convertedFName
+				if err := l.loadFields(field.Elem(), ptrType, newPrefix); err != nil {
+					return fmt.Errorf("error loading nested pointer struct %s: %w", fieldType.Name, err)
+				}
+				continue
+			}
+		}
+
+		if field.Kind() == reflect.Struct {
+			newPrefix += convertedFName
+			if err := l.loadFields(field, fieldType.Type, newPrefix); err != nil {
+				return fmt.Errorf("error loading nested struct %s: %w", fieldType.Name, err)
+			}
+			continue
 		}
 
 		if err := l.setFieldValue(field, l.env(envName)); err != nil {
