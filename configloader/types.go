@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"net/url"
+	"regexp"
 	"time"
 )
 
 var defaultTypeHandlers = []Option{
-
 	WithTypeHandler(func(val string) (time.Duration, error) {
 		return time.ParseDuration(val)
 	}),
@@ -34,15 +35,14 @@ var defaultTypeHandlers = []Option{
 		return base64.StdEncoding.DecodeString(val)
 	}),
 
-	// TODO: Enable when pointers are supported by handlers.
-	// WithTypeHandler(func(val string) (*url.URL, error) {
-	//		return url.Parse(val)
-	//	}),
-	// WithTypeHandler(func(val string) (*regexp.Regexp, error) {
-	// 	return regexp.Compile(val)
-	// }),
-	// 	WithTypeHandler(func(val string) (*net.IPNet, error) {
-	//		_, network, err := net.ParseCIDR(val)
-	//		return network, err
-	//	}),
+	WithTypeHandler(func(val string) (*url.URL, error) {
+		return url.Parse(val)
+	}),
+	WithTypeHandler(func(val string) (*regexp.Regexp, error) {
+		return regexp.Compile(val)
+	}),
+	WithTypeHandler(func(val string) (*net.IPNet, error) {
+		_, network, err := net.ParseCIDR(val)
+		return network, err
+	}),
 }
