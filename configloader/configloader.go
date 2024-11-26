@@ -132,6 +132,7 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			if err := l.setFieldValue(field, l.env(envName)); err != nil {
 				return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
 			}
+			continue
 		}
 
 		// Handle pointers to structs

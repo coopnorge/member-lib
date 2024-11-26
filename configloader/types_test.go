@@ -122,7 +122,7 @@ func TestURLHandler(t *testing.T) {
 		{
 			name:      "Invalid URL",
 			input:     "://invalid",
-			expected:  &url.URL{},
+			expected:  nil,
 			expectErr: assert.Error,
 		},
 	}
