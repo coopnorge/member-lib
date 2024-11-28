@@ -57,8 +57,6 @@ func (d ddMetricExporter) Aggregation(ik sdkmetric.InstrumentKind) sdkmetric.Agg
 	case sdkmetric.InstrumentKindCounter, sdkmetric.InstrumentKindUpDownCounter, sdkmetric.InstrumentKindObservableCounter,
 		sdkmetric.InstrumentKindObservableUpDownCounter, sdkmetric.InstrumentKindObservableGauge, sdkmetric.InstrumentKindGauge:
 		return sdkmetric.AggregationSum{}
-	//case
-	//	return sdkmetric.AggregationLastValue{}
 	case sdkmetric.InstrumentKindHistogram:
 		return sdkmetric.AggregationExplicitBucketHistogram{
 			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
