@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 
 	"github.com/DataDog/datadog-go/v5/statsd"
@@ -203,14 +205,19 @@ func (d ddMetricExporter) histogramFloat64(name string, p metricdata.HistogramDa
 	if v, ok := p.Max.Value(); ok {
 		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.max", name), v, toTags(tags, p.Attributes.ToSlice()), 1.0))
 	}
-	for i := 0; i < len(p.Bounds)-1; i++ {
-		var lower, upper float64
-		lower, upper = p.Bounds[i], p.Bounds[i+1]
-		bounds := []attribute.KeyValue{
-			attribute.String("lower_bound", fmt.Sprintf("%f", lower)),
-			attribute.String("upper_bound", fmt.Sprintf("%f", upper)),
+	bounds := p.Bounds
+	if len(bounds) == 0 || !math.IsInf(bounds[0], -1) {
+		bounds = append([]float64{math.Inf(-1)}, bounds...)
+	}
+	if !math.IsInf(bounds[len(bounds)-1], 1) {
+		bounds = append(bounds, math.Inf(1))
+	}
+	for i := 0; i < len(bounds)-1; i++ {
+		boundsAttrs := []attribute.KeyValue{
+			attribute.String("lower_bound", formatBoundValue(bounds[i])),
+			attribute.String("upper_bound", formatBoundValue(bounds[i+1])),
 		}
-		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.bucket", name), safeUintToInt(p.BucketCounts[i]), toTags(tags, p.Attributes.ToSlice(), bounds), 1.0))
+		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.bucket", name), safeUintToInt(p.BucketCounts[i]), toTags(tags, p.Attributes.ToSlice(), boundsAttrs), 1.0))
 	}
 	return err
 }
@@ -224,16 +231,37 @@ func (d ddMetricExporter) histogramInt64(name string, p metricdata.HistogramData
 	if v, ok := p.Max.Value(); ok {
 		err = errors.Join(err, d.client.Gauge(fmt.Sprintf("%s.max", name), float64(v), toTags(tags, p.Attributes.ToSlice()), 1.0))
 	}
-	for i := 0; i < len(p.Bounds)-1; i++ {
-		var lower, upper float64
-		lower, upper = p.Bounds[i], p.Bounds[i+1]
-		bounds := []attribute.KeyValue{
-			attribute.String("lower_bound", fmt.Sprintf("%f", lower)),
-			attribute.String("upper_bound", fmt.Sprintf("%f", upper)),
+
+	bounds := p.Bounds
+	if len(bounds) == 0 || !math.IsInf(bounds[0], -1) {
+		bounds = append([]float64{math.Inf(-1)}, bounds...)
+	}
+	if !math.IsInf(bounds[len(bounds)-1], 1) {
+		bounds = append(bounds, math.Inf(1))
+	}
+	for i := 0; i < len(bounds)-1; i++ {
+		boundsAttrs := []attribute.KeyValue{
+			attribute.String("lower_bound", formatBoundValue(bounds[i])),
+			attribute.String("upper_bound", formatBoundValue(bounds[i+1])),
 		}
-		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.bucket", name), safeUintToInt(p.BucketCounts[i]), toTags(tags, p.Attributes.ToSlice(), bounds), 1.0))
+		err = errors.Join(err, d.client.Count(fmt.Sprintf("%s.bucket", name), safeUintToInt(p.BucketCounts[i]), toTags(tags, p.Attributes.ToSlice(), boundsAttrs), 1.0))
 	}
 	return err
+}
+
+func formatBoundValue(val float64) string {
+	if math.IsInf(val, -1) {
+		return "-inf"
+	}
+	if math.IsInf(val, 1) {
+		return "inf"
+	}
+
+	res := strconv.FormatFloat(val, 'f', -1, 64)
+	if !strings.Contains(res, ".") {
+		res = res + ".0"
+	}
+	return res
 }
 
 func (d ddMetricExporter) ForceFlush(_ context.Context) error {
