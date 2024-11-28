@@ -2,11 +2,11 @@ package dd
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"strconv"
 
 	"go.opentelemetry.io/otel/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
-	ddtracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 var _ sdklog.Processor = &ddProcessor{}
@@ -23,10 +23,11 @@ func (p *ddProcessor) ForceFlush(_ context.Context) error {
 }
 
 func (p *ddProcessor) OnEmit(ctx context.Context, record *sdklog.Record) error {
-	if span, ok := ddtracer.SpanFromContext(ctx); ok {
+	if span := trace.SpanFromContext(ctx); span.IsRecording() {
+		osCtx := ctxWrapper{span.SpanContext()}
 		record.AddAttributes(
-			log.String("dd.span_id", strconv.FormatUint(span.Context().SpanID(), 10)),
-			log.String("dd.trace_id", strconv.FormatUint(span.Context().TraceID(), 10)),
+			log.String("dd.span_id", strconv.FormatUint(osCtx.SpanID(), 10)),
+			log.String("dd.trace_id", strconv.FormatUint(osCtx.TraceID(), 10)),
 		)
 	}
 	return nil
