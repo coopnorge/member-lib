@@ -257,7 +257,7 @@ func formatBoundValue(val float64) string {
 
 	res := strconv.FormatFloat(val, 'f', -1, 64)
 	if !strings.Contains(res, ".") {
-		res = res + ".0"
+		res += ".0"
 	}
 	return res
 }

@@ -2,10 +2,11 @@ package dd
 
 import (
 	"context"
+	"strconv"
+
 	"go.opentelemetry.io/otel/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	ddtracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-	"strconv"
 )
 
 var _ sdklog.Processor = &ddProcessor{}

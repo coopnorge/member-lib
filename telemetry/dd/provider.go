@@ -4,7 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/DataDog/datadog-go/v5/statsd"
+
+	"os"
+	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -13,29 +18,26 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-	"os"
-	"strings"
-	"time"
 )
 
-func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL string) (*sdktrace.TracerProvider, *sdkmetric.MeterProvider, *sdklog.LoggerProvider, error) {
+func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL string) (tp *sdktrace.TracerProvider, mp *sdkmetric.MeterProvider, lp *sdklog.LoggerProvider, err error) {
 	te, me, le, err := Exporters(ctx, res, traceURL, metricURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	tp := sdktrace.NewTracerProvider(
+	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(te, sdktrace.WithBatchTimeout(2*time.Second)),
 		sdktrace.WithResource(res),
 	)
 
-	mp := sdkmetric.NewMeterProvider(
+	mp = sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(me, sdkmetric.WithInterval(1*time.Second))),
 		sdkmetric.WithResource(res),
 	)
 
-	lp := sdklog.NewLoggerProvider(
+	lp = sdklog.NewLoggerProvider(
 		sdklog.WithProcessor(NewDatadogProcessor()),
 		sdklog.WithProcessor(sdklog.NewBatchProcessor(le)),
 		sdklog.WithResource(res),
@@ -47,9 +49,8 @@ func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL 
 // Exporters returns exporters that rely on the datadog libraries to report traces, metrics and logs.
 // An error will be reported if the resource lacks a service name, service version or a deployment environment.
 func Exporters(_ context.Context, res *resource.Resource, traceURL, metricURL string) (te sdktrace.SpanExporter, me sdkmetric.Exporter, le sdklog.Exporter, err error) {
-
 	// Env sanity check.
-	if err = checkEnv(); err != nil {
+	if err := checkEnv(); err != nil {
 		return nil, nil, nil, err
 	}
 
