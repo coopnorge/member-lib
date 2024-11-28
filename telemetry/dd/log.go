@@ -2,8 +2,9 @@ package dd
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/trace"
 	"strconv"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
