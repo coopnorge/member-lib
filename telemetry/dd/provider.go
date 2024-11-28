@@ -31,7 +31,7 @@ func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL 
 	)
 
 	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(me, sdkmetric.WithInterval(15*time.Second))),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(me, sdkmetric.WithInterval(1*time.Second))),
 		sdkmetric.WithResource(res),
 	)
 

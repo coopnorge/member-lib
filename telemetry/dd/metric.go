@@ -55,10 +55,10 @@ func (d ddMetricExporter) Temporality(kind sdkmetric.InstrumentKind) metricdata.
 func (d ddMetricExporter) Aggregation(ik sdkmetric.InstrumentKind) sdkmetric.Aggregation {
 	switch ik {
 	case sdkmetric.InstrumentKindCounter, sdkmetric.InstrumentKindUpDownCounter, sdkmetric.InstrumentKindObservableCounter,
-		sdkmetric.InstrumentKindObservableUpDownCounter:
+		sdkmetric.InstrumentKindObservableUpDownCounter, sdkmetric.InstrumentKindObservableGauge, sdkmetric.InstrumentKindGauge:
 		return sdkmetric.AggregationSum{}
-	case sdkmetric.InstrumentKindObservableGauge, sdkmetric.InstrumentKindGauge:
-		return sdkmetric.AggregationLastValue{}
+	//case
+	//	return sdkmetric.AggregationLastValue{}
 	case sdkmetric.InstrumentKindHistogram:
 		return sdkmetric.AggregationExplicitBucketHistogram{
 			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
