@@ -195,10 +195,10 @@ func TestLoadingComplexType(t *testing.T) {
 
 	var conf ComplexTypeEx
 	err := Load(&conf,
-		WithTypeHandler[time.Duration](func(s string) (any, error) {
+		WithTypeHandler[time.Duration](func(s string) (time.Duration, error) {
 			return time.ParseDuration(s)
 		}), // IP address handler
-		WithTypeHandler[net.IP](func(s string) (any, error) {
+		WithTypeHandler[net.IP](func(s string) (net.IP, error) {
 			return net.ParseIP(s), nil
 		}))
 
