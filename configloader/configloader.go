@@ -119,11 +119,14 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			envName = convertedFName
 		} else {
 			envName = strings.Split(envName, ",")[0]
+			if prefix != "" && !strings.Contains(envName, newPrefix) {
+				envName = newPrefix + envName
+			}
 			found = true
 		}
 
 		if prefix != "" && !found {
-			envName = prefix + "_" + envName
+			envName = newPrefix + envName
 		}
 
 		// At times, an explicit loading can be added, so we can route here
