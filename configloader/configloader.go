@@ -119,6 +119,9 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			envName = convertedFName
 		} else {
 			envName = strings.Split(envName, ",")[0]
+			if prefix != "" {
+				envName = prefix + "_" + envName
+			}
 			found = true
 		}
 
