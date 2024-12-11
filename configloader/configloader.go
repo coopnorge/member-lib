@@ -11,7 +11,7 @@ import (
 )
 
 type Loader struct {
-	prefix, tag string
+	prefix, nameTag string
 
 	// Type of conversion the struct field will take. Default is SnakeCase.
 	fieldConversion func(string) string
@@ -49,7 +49,7 @@ func WithTypeHandler[T any](f func(string) (T, error)) Option {
 // WithNameTag sets the prefix for environment variable names.
 func WithNameTag(tag string) Option {
 	return func(l *Loader) {
-		l.tag = tag
+		l.nameTag = tag
 	}
 }
 
@@ -113,7 +113,7 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 		convertedFName := l.fieldConversion(fieldType.Name)
 
 		var found bool
-		envName := fieldType.Tag.Get(l.tag)
+		envName := fieldType.Tag.Get(l.nameTag)
 		if envName == "" {
 			found = false
 			envName = convertedFName

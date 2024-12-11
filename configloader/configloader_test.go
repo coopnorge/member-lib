@@ -129,7 +129,7 @@ func TestNameJson(t *testing.T) {
 type ComplexConfig struct {
 	Env     string `mapstructure:"dd_env" json:"dd_env,omitempty"`
 	Service string `mapstructure:"dd_service" json:"dd_service,omitempty"`
-	// Field Name is not the same as mapstructure tag val
+	// Field Name is not the same as mapstructure nameTag val
 	ServiceVersion       string `mapstructure:"dd_version" json:"dd_service_version,omitempty"`
 	DSD                  string `mapstructure:"dd_dogstatsd_url" json:"dd_dsd,omitempty"`
 	APM                  string `mapstructure:"dd_trace_agent_url" json:"dd_apm,omitempty"`
