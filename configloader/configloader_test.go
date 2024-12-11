@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoad(t *testing.T) {
@@ -154,6 +155,39 @@ func TestComplexLoading(t *testing.T) {
 	assert.Equal(t, "1.0.0", conf.ServiceVersion)
 	assert.Equal(t, "", conf.Service, "Service should be zero value")
 	assert.Equal(t, "hehe://someproto", conf.DSD, "Dsd was not picked up ")
+}
+
+func TestWithDefaultTag(t *testing.T) {
+	t.Run("uses value from default", func(t *testing.T) {
+		var cfg struct {
+			Foo string `default:"foo"`
+			Bar struct {
+				Baz string `default:"baz"`
+			}
+		}
+
+		err := Load(&cfg, WithDefaultTag("default"), WithEnv(CustomGetenv))
+		assert.NoError(t, err)
+		assert.Equal(t, "foo", cfg.Foo)
+		assert.Equal(t, "baz", cfg.Bar.Baz)
+	})
+
+	t.Run("uses value from env", func(t *testing.T) {
+		var cfg struct {
+			Foo string `default:"foo"`
+			Bar struct {
+				Baz string `default:"baz"`
+			}
+		}
+
+		require.NoError(t, os.Setenv("FOO", "fooEnv"))
+		require.NoError(t, os.Setenv("FOO", "bazEnv"))
+
+		err := Load(&cfg, WithDefaultTag("default"), WithEnv(CustomGetenv))
+		assert.NoError(t, err)
+		assert.Equal(t, "fooEnv", cfg.Foo)
+		assert.Equal(t, "bazEnv", cfg.Bar.Baz)
+	})
 }
 
 func TestLoadingWithPointerNested(t *testing.T) {
