@@ -11,7 +11,7 @@ import (
 )
 
 type Loader struct {
-	prefix, nameTag string
+	prefix, nameTag, defaultTag string
 
 	// Type of conversion the struct field will take. Default is SnakeCase.
 	fieldConversion func(string) string
@@ -46,10 +46,17 @@ func WithTypeHandler[T any](f func(string) (T, error)) Option {
 	}
 }
 
-// WithNameTag sets the prefix for environment variable names.
+// WithNameTag sets the tag used to override environment variable names.
 func WithNameTag(tag string) Option {
 	return func(l *Loader) {
 		l.nameTag = tag
+	}
+}
+
+// WithDefaultTag sets the tag to use for default values
+func WithDefaultTag(tag string) Option {
+	return func(l *Loader) {
+		l.defaultTag = tag
 	}
 }
 
