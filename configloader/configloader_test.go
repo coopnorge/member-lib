@@ -77,7 +77,7 @@ func TestLoad(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Clearenv()
 			for k, v := range tt.envVars {
-				os.Setenv(k, v)
+				require.NoError(t, os.Setenv(k, v))
 			}
 
 			got := &AppConfig{}
@@ -157,6 +157,24 @@ func TestComplexLoading(t *testing.T) {
 	assert.Equal(t, "hehe://someproto", conf.DSD, "Dsd was not picked up ")
 }
 
+func TestWithPrefixTag(t *testing.T) {
+	var cfg struct {
+		Foo string
+		Bar struct {
+			Baz string
+		}
+	}
+
+	require.NoError(t, os.Setenv("TEST_FOO", "fooEnv"))
+	require.NoError(t, os.Setenv("TEST_BAR_BAZ", "bazEnv"))
+
+	err := Load(&cfg, WithPrefix("TEST"), WithEnv(CustomGetenv))
+	assert.NoError(t, err)
+	assert.Equal(t, "fooEnv", cfg.Foo)
+	assert.Equal(t, "bazEnv", cfg.Bar.Baz)
+
+}
+
 func TestWithDefaultTag(t *testing.T) {
 	t.Run("uses value from default", func(t *testing.T) {
 		var cfg struct {
@@ -181,7 +199,7 @@ func TestWithDefaultTag(t *testing.T) {
 		}
 
 		require.NoError(t, os.Setenv("FOO", "fooEnv"))
-		require.NoError(t, os.Setenv("FOO", "bazEnv"))
+		require.NoError(t, os.Setenv("BAZ", "bazEnv"))
 
 		err := Load(&cfg, WithDefaultTag("default"), WithEnv(CustomGetenv))
 		assert.NoError(t, err)
