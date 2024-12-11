@@ -137,8 +137,8 @@ type ComplexConfig struct {
 	EnableExtraProfiling bool   `mapstructure:"dd_enable_extra_profiling" json:"dd_enable_extra_profiling,omitempty"`
 }
 
-func CustomGetenv(val string) string {
-	return os.Getenv(strings.ToUpper(val))
+func CustomGetenv(val string) (string, bool) {
+	return os.LookupEnv(strings.ToUpper(val))
 }
 
 func TestComplexLoading(t *testing.T) {
@@ -199,12 +199,32 @@ func TestWithDefaultTag(t *testing.T) {
 		}
 
 		require.NoError(t, os.Setenv("FOO", "fooEnv"))
-		require.NoError(t, os.Setenv("BAZ", "bazEnv"))
+		require.NoError(t, os.Setenv("BAR_BAZ", "bazEnv"))
 
 		err := Load(&cfg, WithDefaultTag("default"), WithEnv(CustomGetenv))
 		assert.NoError(t, err)
 		assert.Equal(t, "fooEnv", cfg.Foo)
 		assert.Equal(t, "bazEnv", cfg.Bar.Baz)
+	})
+
+	t.Run("works with custom types", func(t *testing.T) {
+		var cfg struct {
+			Foo *url.URL `default:"https://example.com/foo"`
+			Bar struct {
+				Baz *url.URL `default:"https://example.com/baz"`
+			}
+		}
+
+		err := Load(&cfg, WithDefaultTag("default"), WithEnv(CustomGetenv))
+		assert.NoError(t, err)
+
+		foo, err := url.Parse("https://example.com/foo")
+		require.NoError(t, err)
+		baz, err := url.Parse("https://example.com/baz")
+		require.NoError(t, err)
+
+		assert.Equal(t, foo, cfg.Foo)
+		assert.Equal(t, baz, cfg.Bar.Baz)
 	})
 }
 

@@ -17,7 +17,7 @@ type Loader struct {
 	fieldConversion func(string) string
 
 	// Custom GetEnv function.
-	env func(string) string
+	env func(string) (string, bool)
 
 	// Map of type handlers where key is reflect.Type and value is the handler function
 	handlers map[reflect.Type]func(string) (any, error)
@@ -27,7 +27,7 @@ func defaultLoader() *Loader {
 	l := &Loader{
 		handlers:        make(map[reflect.Type]func(string) (any, error), 0),
 		fieldConversion: strcase.ToScreamingSnake,
-		env:             os.Getenv,
+		env:             os.LookupEnv,
 	}
 	for _, opt := range defaultTypeHandlers {
 		opt(l)
@@ -68,7 +68,7 @@ func WithPrefix(prefix string) Option {
 }
 
 // WithEnv sets a custom environment variable lookup function.
-func WithEnv(env func(string) string) Option {
+func WithEnv(env func(string) (string, bool)) Option {
 	return func(l *Loader) {
 		l.env = env
 	}
@@ -139,7 +139,7 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 		// At times, an explicit loading can be added, so we can route here
 		_, ok := l.handlers[fieldType.Type]
 		if ok {
-			if err := l.setFieldValue(field, l.env(envName)); err != nil {
+			if err := l.setFieldValue(field, l.getOrDefault(fieldType, envName)); err != nil {
 				return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
 			}
 			continue
@@ -170,11 +170,24 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			continue
 		}
 
-		if err := l.setFieldValue(field, l.env(envName)); err != nil {
+		if err := l.setFieldValue(field, l.getOrDefault(fieldType, envName)); err != nil {
 			return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
 		}
 	}
 	return nil
+}
+
+func (l *Loader) getOrDefault(fieldType reflect.StructField, envName string) string {
+	value, found := l.env(envName)
+	if found && value != "" {
+		return value
+	}
+
+	if value, found = fieldType.Tag.Lookup(l.defaultTag); found {
+		return value
+	}
+	// TODO: Error.
+	return value
 }
 
 // setFieldValue converts string value from environment variable to appropriate field type.
