@@ -54,7 +54,7 @@ func WithNameTag(tag string) Option {
 	}
 }
 
-// WithDefaultTag sets the tag to use for default values
+// WithDefaultTag sets the tag to use for default values.
 func WithDefaultTag(tag string) Option {
 	return func(l *Loader) {
 		l.defaultTag = tag
@@ -140,7 +140,7 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 		// At times, an explicit loading can be added, so we can route here
 		_, ok := l.handlers[fieldType.Type]
 		if ok {
-			if err := l.setFieldValue(field, l.getOrDefault(fieldType, envName)); err != nil {
+			if err := l.setFieldValue(field, l.getOrDefault(&fieldType, envName)); err != nil {
 				return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
 			}
 			continue
@@ -171,14 +171,14 @@ func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) erro
 			continue
 		}
 
-		if err := l.setFieldValue(field, l.getOrDefault(fieldType, envName)); err != nil {
+		if err := l.setFieldValue(field, l.getOrDefault(&fieldType, envName)); err != nil {
 			return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
 		}
 	}
 	return nil
 }
 
-func (l *Loader) getOrDefault(fieldType reflect.StructField, envName string) string {
+func (l *Loader) getOrDefault(fieldType *reflect.StructField, envName string) string {
 	value, found := l.env(envName)
 	if found && value != "" {
 		return value
