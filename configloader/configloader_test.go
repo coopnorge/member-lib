@@ -176,6 +176,7 @@ func TestWithPrefixTag(t *testing.T) {
 }
 
 func TestWithDefaultTag(t *testing.T) {
+
 	t.Run("uses value from default", func(t *testing.T) {
 		var cfg struct {
 			Foo string `default:"foo"`
@@ -184,13 +185,29 @@ func TestWithDefaultTag(t *testing.T) {
 			}
 		}
 
-		err := Load(&cfg, WithDefaultTag("default"), WithEnv(CustomGetenv))
+		err := Load(&cfg, WithEnv(CustomGetenv))
+		assert.NoError(t, err)
+		assert.Equal(t, "foo", cfg.Foo)
+		assert.Equal(t, "baz", cfg.Bar.Baz)
+	})
+
+	t.Run("uses custom tag", func(t *testing.T) {
+		var cfg struct {
+			Foo string `default2:"foo"`
+			Bar struct {
+				Baz string `default2:"baz"`
+			}
+		}
+
+		err := Load(&cfg, WithDefaultTag("default2"), WithEnv(CustomGetenv))
 		assert.NoError(t, err)
 		assert.Equal(t, "foo", cfg.Foo)
 		assert.Equal(t, "baz", cfg.Bar.Baz)
 	})
 
 	t.Run("uses value from env", func(t *testing.T) {
+		defer os.Clearenv()
+
 		var cfg struct {
 			Foo string `default:"foo"`
 			Bar struct {
@@ -201,7 +218,7 @@ func TestWithDefaultTag(t *testing.T) {
 		require.NoError(t, os.Setenv("FOO", "fooEnv"))
 		require.NoError(t, os.Setenv("BAR_BAZ", "bazEnv"))
 
-		err := Load(&cfg, WithDefaultTag("default"), WithEnv(CustomGetenv))
+		err := Load(&cfg, WithEnv(CustomGetenv))
 		assert.NoError(t, err)
 		assert.Equal(t, "fooEnv", cfg.Foo)
 		assert.Equal(t, "bazEnv", cfg.Bar.Baz)
@@ -215,7 +232,7 @@ func TestWithDefaultTag(t *testing.T) {
 			}
 		}
 
-		err := Load(&cfg, WithDefaultTag("default"), WithEnv(CustomGetenv))
+		err := Load(&cfg, WithEnv(CustomGetenv))
 		assert.NoError(t, err)
 
 		foo, err := url.Parse("https://example.com/foo")
