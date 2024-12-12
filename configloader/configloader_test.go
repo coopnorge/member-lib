@@ -1,18 +1,117 @@
 package configloader
 
 import (
-	"net"
+	"errors"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoad(t *testing.T) {
+func TestLoader_Load(t *testing.T) {
+	t.Run("support fields", func(t *testing.T) {
+		var cfg struct {
+			Foo string
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		defer os.Clearenv()
+
+		err := Load(&cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "foo", cfg.Foo)
+	})
+
+	t.Run("support field pointers", func(t *testing.T) {
+		var cfg struct {
+			Foo *string
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		defer os.Clearenv()
+
+		err := Load(&cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "foo", *cfg.Foo)
+	})
+
+	t.Run("support slices", func(t *testing.T) {
+		var cfg struct {
+			Foo []string
+		}
+		require.NoError(t, os.Setenv("FOO", "foo,bar"))
+		defer os.Clearenv()
+
+		err := Load(&cfg)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"foo", "bar"}, cfg.Foo)
+	})
+
+	t.Run("support inner struct", func(t *testing.T) {
+		var cfg struct {
+			Inner struct {
+				Foo string
+			}
+		}
+		require.NoError(t, os.Setenv("INNER_FOO", "foo"))
+		defer os.Clearenv()
+
+		err := Load(&cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "foo", cfg.Inner.Foo)
+	})
+
+	t.Run("support inner struct pointers", func(t *testing.T) {
+		var cfg struct {
+			Inner *struct {
+				Foo string
+			}
+		}
+		require.NoError(t, os.Setenv("INNER_FOO", "foo"))
+		defer os.Clearenv()
+
+		err := Load(&cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "foo", cfg.Inner.Foo)
+	})
+
+	t.Run("support embedded structs", func(t *testing.T) {
+		type Test struct {
+			Foo string
+		}
+		var cfg struct {
+			Test
+			Inner Test
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		require.NoError(t, os.Setenv("INNER_FOO", "foo"))
+		defer os.Clearenv()
+
+		err := Load(&cfg)
+		require.NoError(t, err)
+		assert.Equal(t, "foo", cfg.Inner.Foo)
+		assert.Equal(t, "foo", cfg.Test)
+		assert.Equal(t, "foo", cfg.Foo)
+	})
+
+	t.Run("fails if not pointer", func(t *testing.T) {
+		var cfg struct {
+			Foo string
+		}
+		assert.EqualError(t, Load(cfg), "val must be a pointer, got 'struct { Foo string }'")
+	})
+
+	t.Run("fails if nil pointer", func(t *testing.T) {
+		type Test struct {
+			Foo string
+		}
+		var cfg *Test
+		assert.EqualError(t, Load(cfg), "val cannot be nil")
+	})
+}
+
+func TestLoader_Load_structs(t *testing.T) {
 	type DatabaseConfig struct {
 		Host     string
 		Port     int
@@ -102,59 +201,8 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestFails_OnConfigNotBeingStruct(t *testing.T) {
-	type AppConfig struct {
-		Name string
-	}
-	conf := AppConfig{}
-	assert.Error(t, Load(conf), "config should fail as it's not a pointer")
-}
-
-func TestNameJson(t *testing.T) {
-	type JsonExm struct {
-		Name  string `json:"name"`
-		Split string `json:"split,omitempty"`
-	}
-
-	t.Setenv("name", "hehe")
-	t.Setenv("split", "splitval")
-
-	var conf JsonExm
-
-	err := Load(&conf, WithNameTag("json"))
-	assert.NoError(t, err, "Error should be nil")
-	assert.Equal(t, "hehe", conf.Name, "name is not the same as hehe")
-	assert.Equal(t, "splitval", conf.Split, "split is incorrenclty read")
-}
-
-type ComplexConfig struct {
-	Env     string `mapstructure:"dd_env" json:"dd_env,omitempty"`
-	Service string `mapstructure:"dd_service" json:"dd_service,omitempty"`
-	// Field Name is not the same as mapstructure nameTag val
-	ServiceVersion       string `mapstructure:"dd_version" json:"dd_service_version,omitempty"`
-	DSD                  string `mapstructure:"dd_dogstatsd_url" json:"dd_dsd,omitempty"`
-	APM                  string `mapstructure:"dd_trace_agent_url" json:"dd_apm,omitempty"`
-	EnableExtraProfiling bool   `mapstructure:"dd_enable_extra_profiling" json:"dd_enable_extra_profiling,omitempty"`
-}
-
 func CustomGetenv(val string) (string, bool) {
 	return os.LookupEnv(strings.ToUpper(val))
-}
-
-func TestComplexLoading(t *testing.T) {
-	t.Setenv("DD_ENV", "prod")
-	t.Setenv("DD_VERSION", "1.0.0")
-	t.Setenv("DD_DOGSTATSD_URL", "hehe://someproto")
-	t.Setenv("DD_ENABLE_EXTRA_PROFILING", "TRUE")
-
-	var conf ComplexConfig
-
-	err := Load(&conf, WithNameTag("mapstructure"), WithEnv(CustomGetenv))
-	assert.NoError(t, err, "Loading should not fail")
-	assert.Equal(t, "prod", conf.Env, "Env should be prod")
-	assert.Equal(t, "1.0.0", conf.ServiceVersion)
-	assert.Equal(t, "", conf.Service, "Service should be zero value")
-	assert.Equal(t, "hehe://someproto", conf.DSD, "Dsd was not picked up ")
 }
 
 func TestWithPrefixTag(t *testing.T) {
@@ -175,8 +223,96 @@ func TestWithPrefixTag(t *testing.T) {
 
 }
 
-func TestWithDefaultTag(t *testing.T) {
+func TestWithPrefix(t *testing.T) {
+	t.Run("supports prefix", func(t *testing.T) {
+		var cfg struct {
+			Val    string
+			Struct struct {
+				Val string
+			}
+		}
+		require.NoError(t, os.Setenv("PREFIX_VAL", "bar"))
+		require.NoError(t, os.Setenv("PREFIX_STRUCT_VAL", "bar"))
+		err := Load(&cfg, WithPrefix("PREFIX"))
+		assert.NoError(t, err)
 
+		assert.Equal(t, "bar", cfg.Val)
+		assert.Equal(t, "bar", cfg.Struct.Val)
+	})
+}
+
+func TestWithNameTag(t *testing.T) {
+	t.Run("uses value from name tag", func(t *testing.T) {
+		var cfg struct {
+			Val    string `env:"FOO"`
+			Struct struct {
+				Val string `env:"BAR"`
+			}
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		require.NoError(t, os.Setenv("BAR", "bar"))
+		err := Load(&cfg, WithNameTag("env"))
+		assert.NoError(t, err)
+
+		assert.Equal(t, "foo", cfg.Val)
+		assert.Equal(t, "bar", cfg.Struct.Val)
+	})
+
+	t.Run("support split tags", func(t *testing.T) {
+		var cfg struct {
+			Val string `env:"FOO,bar"`
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		defer os.Clearenv()
+
+		err := Load(&cfg, WithNameTag("env"))
+		assert.NoError(t, err)
+
+		assert.Equal(t, "foo", cfg.Val)
+	})
+
+	t.Run("uses value from name tag and prefix", func(t *testing.T) {
+		var cfg struct {
+			Val    string `env:"FOO"`
+			Struct struct {
+				Val string `env:"BAR"`
+			}
+		}
+		require.NoError(t, os.Setenv("PREFIX_VAL", "foo"))
+		require.NoError(t, os.Setenv("PREFIX_STRUCT_VAL", "bar"))
+		err := Load(&cfg, WithNameTag("env"), WithPrefix("PREFIX"))
+		assert.NoError(t, err)
+
+		assert.Equal(t, "foo", cfg.Val)
+		assert.Equal(t, "bar", cfg.Struct.Val)
+	})
+
+	t.Run("uses default value", func(t *testing.T) {
+		var cfg struct {
+			Val        string `env:"FOO"`
+			ValDefault string `env:"FOO_DEF" default:"defaultFoo"`
+			Struct     struct {
+				Val        string `env:"BAR"`
+				ValDefault string `env:"FOO_DEF" default:"defaultBar"`
+			}
+		}
+		require.NoError(t, os.Setenv("PREFIX_FOO", "foo"))
+		require.NoError(t, os.Setenv("PREFIX_BAR", "bar"))
+		err := Load(&cfg,
+			WithNameTag("env"),
+			WithPrefix("PREFIX"),
+			WithDefaultTag("default"),
+		)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "foo", cfg.Val)
+		assert.Equal(t, "bar", cfg.Struct.Val)
+		assert.Equal(t, "defaultFoo", cfg.ValDefault)
+		assert.Equal(t, "defaultBar", cfg.Struct.ValDefault)
+	})
+}
+
+func TestWithDefaultTag(t *testing.T) {
 	t.Run("uses value from default", func(t *testing.T) {
 		var cfg struct {
 			Foo string `default:"foo"`
@@ -245,55 +381,98 @@ func TestWithDefaultTag(t *testing.T) {
 	})
 }
 
-func TestLoadingWithPointerNested(t *testing.T) {
-	type SecondElement struct {
-		Url string
-	}
+func TestWithTypeHandler(t *testing.T) {
+	t.Run("fails with unsupported types", func(t *testing.T) {
+		type CustomType string
+		var cfg struct {
+			Val CustomType
+		}
+		require.NoError(t, os.Setenv("VAL", "foo"))
+		defer os.Clearenv()
+		err := Load(&cfg)
+		assert.EqualError(t, err, "unsupported type configloader.CustomType for field...")
+	})
 
-	type PointerElement struct {
-		Name string
-		Sec  *SecondElement
-	}
+	t.Run("fails with error from handler", func(t *testing.T) {
+		type CustomType string
+		var cfg struct {
+			Val CustomType
+		}
+		require.NoError(t, os.Setenv("VAL", "foo"))
+		defer os.Clearenv()
 
-	type ConfigWP struct {
-		Pel *PointerElement
-	}
+		expectedErr := errors.New("expected")
+		err := Load(&cfg, WithTypeHandler(func(val string) (CustomType, error) {
+			assert.Equal(t, "foo", val)
+			return "", expectedErr
+		}))
+		assert.ErrorIs(t, err, expectedErr)
+		assert.EqualError(t, err, "parse error: expected")
+		// TODO: ErrorAd
+	})
 
-	// NOTE: This is how we use the lib.
-	t.Setenv("PEL_NAME", "alfredo")
-	t.Setenv("PEL_SEC_URL", "www.pelsec.url")
-	var conf ConfigWP
-	err := Load(&conf)
+	t.Run("support custom handler for primitive", func(t *testing.T) {
+		type AnotherString string
+		var cfg struct {
+			Val      AnotherString
+			ValPtr   *AnotherString
+			ValSlice []AnotherString
+		}
+		require.NoError(t, os.Setenv("VAL", "foo"))
+		require.NoError(t, os.Setenv("VAL_PTR", "foo"))
+		require.NoError(t, os.Setenv("VAL_SLICE", "foo,foo"))
+		defer os.Clearenv()
 
-	assert.NoError(t, err, "Expected error free Load")
-	assert.Equal(t, "alfredo", conf.Pel.Name)
-	assert.Equal(t, "www.pelsec.url", conf.Pel.Sec.Url)
+		err := Load(&cfg, WithTypeHandler(func(val string) (AnotherString, error) {
+			assert.Equal(t, "foo", val)
+			return "notFoo", nil
+		}))
+		assert.NoError(t, err)
+
+		assert.Equal(t, AnotherString("notFoo"), cfg.Val)
+		assert.Equal(t, AnotherString("notFoo"), *cfg.ValPtr)
+		assert.Equal(t, []AnotherString{"notFoo", "notFoo"}, cfg.ValSlice)
+	})
+
+	t.Run("support custom handler for structs", func(t *testing.T) {
+		type Test struct {
+			Val string
+		}
+		var cfg struct {
+			Val      Test
+			ValPtr   *Test
+			ValSlice []Test
+		}
+		require.NoError(t, os.Setenv("VAL", "foo"))
+		require.NoError(t, os.Setenv("VAL_PTR", "foo"))
+		require.NoError(t, os.Setenv("VAL_SLICE", "foo,foo"))
+		defer os.Clearenv()
+
+		err := Load(&cfg, WithTypeHandler(func(val string) (Test, error) {
+			assert.Equal(t, "foo", val)
+			return Test{Val: "notFoo"}, nil
+		}))
+		assert.NoError(t, err)
+
+		assert.Equal(t, Test{Val: "notFoo"}, cfg.Val)
+		assert.Equal(t, Test{Val: "notFoo"}, *cfg.ValPtr)
+		assert.Equal(t, []Test{{Val: "notFoo"}, {Val: "notFoo"}}, cfg.ValSlice)
+	})
 }
 
-func TestLoadingComplexType(t *testing.T) {
-	// Complex types
-	type ComplexTypeEx struct {
-		Timeout time.Duration
-		URL     url.URL
-		IPAddr  net.IP
-	}
+func TestWithEnv(t *testing.T) {
+	t.Run("support custom env", func(t *testing.T) {
+		var cfg struct {
+			Val string
+		}
+		require.NoError(t, os.Setenv("VAL", "foo"))
+		defer os.Clearenv()
 
-	t.Setenv("TIMEOUT", "1s")
-	t.Setenv("URL_HOST", "localhost:8080")
-	t.Setenv("IP_ADDR", "192.168.1.1")
-
-	var conf ComplexTypeEx
-	err := Load(&conf,
-		WithTypeHandler[time.Duration](func(s string) (time.Duration, error) {
-			return time.ParseDuration(s)
-		}), // IP address handler
-		WithTypeHandler[net.IP](func(s string) (net.IP, error) {
-			return net.ParseIP(s), nil
+		err := Load(&cfg, WithEnv(func(s string) (string, bool) {
+			assert.Equal(t, "VAL", s)
+			return "notFoo", false
 		}))
-
-	assert.NoError(t, err, "Expected error free Load")
-	sec, _ := time.ParseDuration("1s")
-	assert.Equal(t, sec, conf.Timeout, "Timeout was not read properly")
-	assert.Equal(t, "localhost:8080", conf.URL.Host)
-	assert.Equal(t, "192.168.1.1", conf.IPAddr.String())
+		require.NoError(t, err)
+		assert.Equal(t, "notFoo", cfg.Val)
+	})
 }

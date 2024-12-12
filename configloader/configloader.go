@@ -1,10 +1,11 @@
 package configloader
 
 import (
+	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -23,6 +24,30 @@ type Loader struct {
 	handlers map[reflect.Type]func(string) (any, error)
 }
 
+type Field struct {
+	Value reflect.Value
+	Path  []reflect.StructField
+}
+
+func (f *Field) Names() (names []string) {
+	for _, field := range f.Path {
+		names = append(names, field.Name)
+	}
+	return names
+}
+
+func (f *Field) String() string {
+	return fmt.Sprintf("%s (%s)", strings.Join(f.Names(), "."), f.Value.Type().String())
+}
+
+type UnsupportedTypeError struct {
+	reflect.Type
+}
+
+func (e UnsupportedTypeError) Error() string {
+	return fmt.Sprintf("unsupported type %s", e.Type)
+}
+
 func defaultLoader() *Loader {
 	l := &Loader{
 		handlers:        make(map[reflect.Type]func(string) (any, error), 0),
@@ -37,6 +62,17 @@ func defaultLoader() *Loader {
 }
 
 type Option func(*Loader)
+
+var _ error = MissingEnvErr{}
+
+type MissingEnvErr struct {
+	Key   string
+	Field Field
+}
+
+func (m MissingEnvErr) Error() string {
+	return fmt.Sprintf("missing variable '%s' for the field '%s'", m.Key, m.Field.String())
+}
 
 func WithTypeHandler[T any](f func(string) (T, error)) Option {
 	return func(l *Loader) {
@@ -84,173 +120,170 @@ func Load(value any, opts ...Option) error {
 	return loader.Load(value)
 }
 
-// Load loads a configuration struct from environment variables.
-// It supports nested structs and handles type conversion for basic types.
-func (l *Loader) Load(val any) error {
+func (l *Loader) Load(val any) (errs error) {
 	ptrValue := reflect.ValueOf(val)
-	if ptrValue.Kind() != reflect.Pointer || ptrValue.IsNil() {
-		return fmt.Errorf("need a pointer to load values into. Got %s", reflect.TypeOf(val).String())
+	if ptrValue.Kind() != reflect.Pointer {
+		return fmt.Errorf("val must be a pointer, got '%s'", reflect.TypeOf(val).String())
 	}
-	v := ptrValue.Elem()
-	t := ptrValue.Type().Elem()
+	if ptrValue.IsNil() {
+		return fmt.Errorf("val cannot be nil")
+	}
 
-	if err := l.loadFields(v, t, l.prefix); err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+	// Iterate over each leaf variables of the struct.
+	for variable := range traverse(Field{Value: ptrValue}, l.getChildren) {
+
+		value, err := l.lookup(l.keyName(variable), variable)
+		if err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+
+		err = l.set(value, variable)
+		if err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
 	}
-	return nil
+	return errs
 }
 
-// loadFields recursively processes struct fields and loads values from environment variables.
-// nolint:gocognit // Necessary complexity. High IQ function.
-func (l *Loader) loadFields(v reflect.Value, t reflect.Type, prefix string) error {
-	if !v.IsValid() {
-		return fmt.Errorf("struct should be an initialized pointer")
+func (l *Loader) keyName(variable Field) string {
+	var names []string
+	if l.prefix != "" {
+		names = append(names, l.prefix)
+	}
+	for _, field := range variable.Path {
+		if name, found := field.Tag.Lookup(l.nameTag); found {
+			// TODO: Does it make sense to replace the whole name?
+			names = []string{name}
+			break
+		} else {
+			names = append(names, l.fieldConversion(field.Name))
+		}
+	}
+	key := strings.Join(names, "_")
+	return key
+}
+
+func (l *Loader) handler(typ reflect.Type) (func(reflect.Value, string) error, error) {
+	_, ok := l.handlers[typ]
+	if ok {
+		return func(value reflect.Value, val string) error {
+			v, err := l.handlers[typ](val)
+			if err == nil {
+				value.Set(reflect.ValueOf(v))
+			}
+			return err
+		}, nil
+	}
+	if typ.Kind() == reflect.Slice {
+		eh, err := l.handler(typ.Elem())
+		if err == nil {
+			return func(value reflect.Value, val string) (err error) {
+				elements := strings.Split(val, ",")
+				slice := reflect.MakeSlice(value.Type(), len(elements), len(elements))
+				for i, element := range elements {
+					herr := eh(slice.Index(i), element)
+					if herr != nil {
+						err = errors.Join(err, herr)
+					}
+				}
+				value.Set(slice)
+				return err
+			}, nil
+		}
+	}
+	return nil, &UnsupportedTypeError{typ}
+}
+
+func (l *Loader) canHandle(field reflect.Value) bool {
+	if !field.CanSet() || !field.IsValid() {
+		return false
+	}
+	_, err := l.handler(field.Type())
+	if err != nil {
+		return false
 	}
 
-	for i := 0; i < t.NumField(); i++ {
-		field := v.Field(i)
-		fieldType := t.Field(i)
+	return true
+}
 
-		if !field.CanSet() || !field.IsValid() {
-			continue
-		}
-		newPrefix := prefix
-		if newPrefix != "" {
-			newPrefix += "_"
-		}
-		convertedFName := l.fieldConversion(fieldType.Name)
-
-		var found bool
-		envName := fieldType.Tag.Get(l.nameTag)
-		if envName == "" {
-			found = false
-			envName = convertedFName
-		} else {
-			envName = strings.Split(envName, ",")[0]
-			if prefix != "" && !strings.Contains(envName, newPrefix) {
-				envName = newPrefix + envName
-			}
-			found = true
-		}
-
-		if prefix != "" && !found {
-			envName = newPrefix + envName
-		}
-
-		// At times, an explicit loading can be added, so we can route here
-		_, ok := l.handlers[fieldType.Type]
-		if ok {
-			if err := l.setFieldValue(field, l.getOrDefault(&fieldType, envName)); err != nil {
-				return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
-			}
-			continue
-		}
-
-		// Handle pointers to structs
-		if field.Kind() == reflect.Ptr {
-			ptrType := field.Type().Elem()
-			// Initialize if nil
-			if field.IsNil() {
-				field.Set(reflect.New(ptrType))
-			}
-			// If it's a pointer to struct, process it
-			if field.Elem().Kind() == reflect.Struct {
-				newPrefix += convertedFName
-				if err := l.loadFields(field.Elem(), ptrType, newPrefix); err != nil {
-					return fmt.Errorf("error loading nested pointer struct %s: %w", fieldType.Name, err)
+// traverse yields the leaf nodes of a tree.
+func traverse[T any](root T, childFn func(T) []T) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		var traverse func(T) bool
+		traverse = func(node T) bool {
+			children := childFn(node)
+			if len(children) == 0 {
+				if !yield(node) {
+					return false
 				}
+				return true
+			}
+			for _, child := range children {
+				if !traverse(child) {
+					return false
+				}
+			}
+			return true
+		}
+		traverse(root)
+	}
+}
+
+func (l *Loader) getChildren(current Field) []Field {
+	if l.canHandle(current.Value) {
+		return nil
+	}
+
+	// Unwrap the current if it's a pointer.
+	if current.Value.Kind() == reflect.Ptr {
+		if current.Value.IsNil() {
+			current.Value.Set(reflect.New(current.Value.Type().Elem()))
+		}
+		return []Field{{
+			Value: current.Value.Elem(),
+			Path:  current.Path,
+		}}
+	}
+
+	if current.Value.Kind() == reflect.Struct {
+		var children []Field
+		for i := 0; i < current.Value.NumField(); i++ {
+			fv := current.Value.Field(i)
+			ft := current.Value.Type().Field(i)
+			if !fv.CanSet() || !fv.IsValid() {
 				continue
 			}
+			children = append(children, Field{
+				Value: fv,
+				Path:  append(current.Path, ft),
+			})
 		}
-
-		if field.Kind() == reflect.Struct {
-			newPrefix += convertedFName
-			if err := l.loadFields(field, fieldType.Type, newPrefix); err != nil {
-				return fmt.Errorf("error loading nested struct %s: %w", fieldType.Name, err)
-			}
-			continue
-		}
-
-		if err := l.setFieldValue(field, l.getOrDefault(&fieldType, envName)); err != nil {
-			return fmt.Errorf("error setting field %s: %w", fieldType.Name, err)
-		}
+		return children
 	}
 	return nil
 }
 
-func (l *Loader) getOrDefault(fieldType *reflect.StructField, envName string) string {
-	value, found := l.env(envName)
-	if found && value != "" {
-		return value
+func (l *Loader) lookup(key string, variable Field) (string, error) {
+	field := variable.Path[len(variable.Path)-1]
+	value, found := l.env(key)
+	if !found || value == "" {
+		if value, found = field.Tag.Lookup(l.defaultTag); !found {
+			return "", MissingEnvErr{Key: key, Field: variable}
+		}
 	}
-
-	if value, found = fieldType.Tag.Lookup(l.defaultTag); found {
-		return value
-	}
-	// TODO: Error.
-	return value
+	return value, nil
 }
 
-// setFieldValue converts string value from environment variable to appropriate field type.
-// nolint:funlen // Switch statement makes this a lengthy func.
-func (l *Loader) setFieldValue(field reflect.Value, value string) error {
-	// skip if value is nil or empty
-	if value == "" {
-		return nil
+func (l *Loader) set(value string, variable Field) error {
+	handler, err := l.handler(variable.Value.Type())
+	if err != nil {
+		return err
 	}
-
-	// Override type if a specific handler was given.
-	// NOTE: Overrides of Complex Types masks could be picked up instead of the masked type.
-	f, ok := l.handlers[field.Type()]
-	if ok {
-		v, err := f(value)
-		if err != nil {
-			return err
-		}
-		field.Set(reflect.ValueOf(v))
-		return nil
-	}
-
-	switch field.Kind() {
-	case reflect.String:
-		field.SetString(value)
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		val, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			return err
-		}
-		field.SetInt(val)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		val, err := strconv.ParseUint(value, 10, 64)
-		if err != nil {
-			return err
-		}
-		field.SetUint(val)
-	case reflect.Float32, reflect.Float64:
-		val, err := strconv.ParseFloat(value, 64)
-		if err != nil {
-			return err
-		}
-		field.SetFloat(val)
-	case reflect.Bool:
-		val, err := strconv.ParseBool(value)
-		if err != nil {
-			// Let user know that Parsing is wrong
-			return err
-		}
-		field.SetBool(val)
-	case reflect.Slice:
-		// Handle slice types (split by comma)
-		elements := strings.Split(value, ",")
-		slice := reflect.MakeSlice(field.Type(), len(elements), len(elements))
-		for i, element := range elements {
-			if err := l.setFieldValue(slice.Index(i), strings.TrimSpace(element)); err != nil {
-				return err
-			}
-		}
-		field.Set(slice)
-	default:
-		return fmt.Errorf("unsupported field type: %s", field.Kind())
+	err = handler(variable.Value, value)
+	if err != nil {
+		return fmt.Errorf("parse error: %w", err)
 	}
 	return nil
 }
