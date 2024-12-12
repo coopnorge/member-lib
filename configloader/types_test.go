@@ -6,12 +6,12 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Helper function for running type handler tests
@@ -24,14 +24,22 @@ func runTypeHandlerTest[T any](t *testing.T, tests []struct {
 ) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := os.Setenv("VAL", tt.input)
-			require.NoError(t, err)
 			val := struct {
-				Val T
+				Val      T
+				ValPtr   *T
+				ValSlice []T
 			}{}
-			err = Load(&val)
+			sliceVal := strings.Join([]string{tt.input, tt.input}, ",")
+			require.NoError(t, os.Setenv("VAL", tt.input))
+			require.NoError(t, os.Setenv("VAL_PTR", tt.input))
+			require.NoError(t, os.Setenv("VAL_SLICE", sliceVal))
+			defer os.Clearenv()
+
+			err := Load(&val)
 			tt.expectErr(t, err)
 			assert.EqualValues(t, tt.expected, val.Val)
+			assert.EqualValues(t, tt.expected, *val.ValPtr)
+			assert.EqualValues(t, []T{tt.expected, tt.expected}, val.ValSlice)
 		})
 	}
 }
@@ -42,6 +50,36 @@ func mustParseCIDR(s string) *net.IPNet {
 	if err != nil {
 	}
 	return network
+}
+
+func TestIntegerHandler(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		expected  time.Duration
+		expectErr assert.ErrorAssertionFunc
+	}{
+		{
+			name:      "Valid Duration",
+			input:     "5s",
+			expected:  5 * time.Second,
+			expectErr: assert.NoError,
+		},
+		{
+			name:      "Zero duration",
+			input:     "0",
+			expected:  time.Duration(0),
+			expectErr: assert.NoError,
+		},
+		{
+			name:      "Invalid duration",
+			input:     "invalid",
+			expected:  time.Duration(0),
+			expectErr: assert.Error,
+		},
+	}
+
+	runTypeHandlerTest(t, tests)
 }
 
 func TestDurationHandler(t *testing.T) {
