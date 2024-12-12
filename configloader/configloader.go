@@ -150,18 +150,63 @@ func WithEnv(env func(string) (string, bool)) Option {
 	}
 }
 
-// Load takes a pointer to a struct and populates its fields from environment variables.
-// Field names are converted to SCREAMING_SNAKE_CASE by default to form environment variable names.
-// For example, a field named "DatabaseURL" would look for an environment variable named "DATABASE_URL".
+// Load populates a struct's fields with values from environment variables.
+// It takes a pointer to a struct and optional configuration options.
 //
-// The supported field types are determined by the registered type handlers. Use WithTypeHandler
-// to add support for custom types.
+// Each struct field's name is converted to SCREAMING_SNAKE_CASE to determine the
+// environment variable name. For example:
+//   - Field "ServerPort" looks for "SERVER_PORT"
+//   - Field "DatabaseURL" looks for "DATABASE_URL"
+//   - Nested field "Database.Password" looks for "DATABASE_PASSWORD"
+//
+// Supported field types out of the box:
+//   - Basic types: string, bool, int*, uint*, float*
+//   - time.Duration, time.Time (RFC3339 format)
+//   - net.IP, *net.IPNet (CIDR)
+//   - *url.URL, *regexp.Regexp
+//   - json.RawMessage
+//   - []byte (base64 encoded)
+//   - Slices of any supported type (comma-separated values)
+//
+// Features:
+//   - Custom type support via WithTypeHandler
+//   - Default values via struct tags: `default:"value"`
+//   - Custom env names via struct tags: `env:"CUSTOM_NAME"`
+//   - Optional prefix for all env vars: WithPrefix("APP")
+//   - Nested struct support
+//   - Pointer fields are automatically initialized
+//
+// Example usage:
+//
+//	type Config struct {
+//	    Port        int           `default:"8080"`
+//	    Host        string        `env:"SERVICE_HOST"`
+//	    Timeout     time.Duration
+//	    Database struct {
+//	        URL      string
+//	        Password string
+//	    }
+//	}
+//
+//	var cfg Config
+//	err := configloader.Load(&cfg,
+//	    WithPrefix("APP"),
+//	    WithNameTag("env"),
+//	    WithDefaultTag("default"),
+//	)
+//
+// The above will look for these environment variables:
+//   - APP_PORT (default: "8080")
+//   - SERVICE_HOST (custom name via tag)
+//   - APP_TIMEOUT
+//   - APP_DATABASE_URL
+//   - APP_DATABASE_PASSWORD
 //
 // Returns an error if:
-// - The value is not a pointer to a struct
-// - Required environment variables are missing
-// - Type conversion fails for any field
-// - Any field has an unsupported type
+//   - The value is not a pointer to a struct
+//   - Required environment variables are missing
+//   - Type conversion fails for any field
+//   - Any field has an unsupported type
 func Load(value any, opts ...Option) error {
 	loader := defaultLoader()
 	for _, opt := range opts {
