@@ -131,7 +131,6 @@ func (l *Loader) Load(val any) (errs error) {
 
 	// Iterate over each leaf variables of the struct.
 	for variable := range traverse(Field{Value: ptrValue}, l.getChildren) {
-
 		value, err := l.lookup(l.keyName(variable), variable)
 		if err != nil {
 			errs = errors.Join(errs, err)
@@ -157,9 +156,8 @@ func (l *Loader) keyName(variable Field) string {
 			// TODO: Does it make sense to replace the whole name?
 			names = []string{name}
 			break
-		} else {
-			names = append(names, l.fieldConversion(field.Name))
 		}
+		names = append(names, l.fieldConversion(field.Name))
 	}
 	key := strings.Join(names, "_")
 	return key
@@ -201,11 +199,7 @@ func (l *Loader) canHandle(field reflect.Value) bool {
 		return false
 	}
 	_, err := l.handler(field.Type())
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 // traverse yields the leaf nodes of a tree.
@@ -215,10 +209,7 @@ func traverse[T any](root T, childFn func(T) []T) iter.Seq[T] {
 		traverse = func(node T) bool {
 			children := childFn(node)
 			if len(children) == 0 {
-				if !yield(node) {
-					return false
-				}
-				return true
+				return yield(node)
 			}
 			for _, child := range children {
 				if !traverse(child) {
