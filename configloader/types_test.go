@@ -52,29 +52,89 @@ func mustParseCIDR(s string) *net.IPNet {
 	return network
 }
 
+func TestBooleanHandler(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		expected  bool
+		expectErr assert.ErrorAssertionFunc
+	}{
+		{
+			name:      "True boolean",
+			input:     "true",
+			expected:  true,
+			expectErr: assert.NoError,
+		},
+		{
+			name:      "False boolean",
+			input:     "false",
+			expected:  false,
+			expectErr: assert.NoError,
+		},
+		{
+			name:      "False boolean",
+			input:     "invalid",
+			expected:  false,
+			expectErr: assert.Error,
+		},
+	}
+
+	runTypeHandlerTest(t, tests)
+}
+
+func TestFloatHandler(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		expected  float64
+		expectErr assert.ErrorAssertionFunc
+	}{
+		{
+			name:      "Positive float",
+			input:     "10.01",
+			expected:  10.01,
+			expectErr: assert.NoError,
+		},
+		{
+			name:      "Negative float",
+			input:     "-10.01",
+			expected:  -10.01,
+			expectErr: assert.NoError,
+		},
+		{
+			name:      "Invalid float",
+			input:     "invalid",
+			expected:  0,
+			expectErr: assert.Error,
+		},
+	}
+
+	runTypeHandlerTest(t, tests)
+}
+
 func TestIntegerHandler(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     string
-		expected  time.Duration
+		expected  int
 		expectErr assert.ErrorAssertionFunc
 	}{
 		{
-			name:      "Valid Duration",
-			input:     "5s",
-			expected:  5 * time.Second,
+			name:      "Positive integer",
+			input:     "10",
+			expected:  10,
 			expectErr: assert.NoError,
 		},
 		{
-			name:      "Zero duration",
-			input:     "0",
-			expected:  time.Duration(0),
+			name:      "Negative integer",
+			input:     "-10",
+			expected:  -10,
 			expectErr: assert.NoError,
 		},
 		{
-			name:      "Invalid duration",
+			name:      "Invalid integer",
 			input:     "invalid",
-			expected:  time.Duration(0),
+			expected:  0,
 			expectErr: assert.Error,
 		},
 	}
