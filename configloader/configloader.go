@@ -194,7 +194,6 @@ func (l *Loader) keyName(variable Field) (string, error) {
 		} else {
 			names = append(names, l.fieldConversion(field.Name))
 		}
-
 	}
 	key := strings.Join(names, "_")
 	return key, nil
@@ -295,7 +294,6 @@ func (l *Loader) getChildren(current Field) []Field {
 					Path:  append(current.Path, ft),
 				})
 			}
-
 		}
 		return children
 	}

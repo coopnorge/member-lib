@@ -19,9 +19,9 @@ func (e *ConfigLoadError) Add(err error) {
 }
 
 func (e *ConfigLoadError) Error() string {
-	var msgs []string
-	for _, err := range e.Errors {
-		msgs = append(msgs, err.Error())
+	var msgs = make([]string, len(e.Errors))
+	for i, err := range e.Errors {
+		msgs[i] = err.Error()
 	}
 	return fmt.Sprintf("failed to load %s:\n%s", e.Value.String(),
 		strings.Join(msgs, "\n"))
