@@ -48,8 +48,10 @@ func defaultLoader() *Loader {
 	l := &Loader{
 		handlers:        make(map[reflect.Type]func(string) (any, error), 0),
 		fieldConversion: strcase.ToScreamingSnake,
-		env:             os.LookupEnv,
-		defaultTag:      "default",
+		env: func(val string) (string, bool) {
+			return os.LookupEnv(strings.ToUpper(val))
+		},
+		defaultTag: "default",
 	}
 	for _, opt := range defaultTypeHandlers {
 		opt(l)

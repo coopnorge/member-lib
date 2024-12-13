@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,10 +121,6 @@ error processing field Bar (string): environment variable BAR not found`)
 	})
 }
 
-func CustomGetenv(val string) (string, bool) {
-	return os.LookupEnv(strings.ToUpper(val))
-}
-
 func TestWithPrefixTag(t *testing.T) {
 	var cfg struct {
 		Foo string
@@ -137,7 +132,7 @@ func TestWithPrefixTag(t *testing.T) {
 	t.Setenv("TEST_FOO", "fooEnv")
 	t.Setenv("TEST_BAR_BAZ", "bazEnv")
 
-	err := Load(&cfg, WithPrefix("TEST"), WithEnv(CustomGetenv))
+	err := Load(&cfg, WithPrefix("TEST"))
 	assert.NoError(t, err)
 	assert.Equal(t, "fooEnv", cfg.Foo)
 	assert.Equal(t, "bazEnv", cfg.Bar.Baz)
@@ -306,7 +301,7 @@ func TestWithDefaultTag(t *testing.T) {
 			}
 		}
 
-		err := Load(&cfg, WithEnv(CustomGetenv))
+		err := Load(&cfg)
 		assert.NoError(t, err)
 		assert.Equal(t, "foo", cfg.Foo)
 		assert.Equal(t, "baz", cfg.Bar.Baz)
@@ -320,7 +315,7 @@ func TestWithDefaultTag(t *testing.T) {
 			}
 		}
 
-		err := Load(&cfg, WithDefaultTag("default2"), WithEnv(CustomGetenv))
+		err := Load(&cfg, WithDefaultTag("default2"))
 		assert.NoError(t, err)
 		assert.Equal(t, "foo", cfg.Foo)
 		assert.Equal(t, "baz", cfg.Bar.Baz)
@@ -339,7 +334,7 @@ func TestWithDefaultTag(t *testing.T) {
 		t.Setenv("FOO", "fooEnv")
 		t.Setenv("BAR_BAZ", "bazEnv")
 
-		err := Load(&cfg, WithEnv(CustomGetenv))
+		err := Load(&cfg)
 		assert.NoError(t, err)
 		assert.Equal(t, "fooEnv", cfg.Foo)
 		assert.Equal(t, "bazEnv", cfg.Bar.Baz)
@@ -353,7 +348,7 @@ func TestWithDefaultTag(t *testing.T) {
 			}
 		}
 
-		err := Load(&cfg, WithEnv(CustomGetenv))
+		err := Load(&cfg)
 		assert.NoError(t, err)
 
 		foo, err := url.Parse("https://example.com/foo")
