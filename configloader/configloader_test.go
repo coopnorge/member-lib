@@ -278,8 +278,10 @@ func TestWithNameTag(t *testing.T) {
 				Val string `env:"BAR"`
 			}
 		}
-		require.NoError(t, os.Setenv("PREFIX_VAL", "foo"))
-		require.NoError(t, os.Setenv("PREFIX_STRUCT_VAL", "bar"))
+		require.NoError(t, os.Setenv("PREFIX_FOO", "foo"))
+		require.NoError(t, os.Setenv("PREFIX_STRUCT_BAR", "bar"))
+		defer os.Clearenv()
+
 		err := Load(&cfg, WithNameTag("env"), WithPrefix("PREFIX"))
 		assert.NoError(t, err)
 
@@ -390,7 +392,9 @@ func TestWithTypeHandler(t *testing.T) {
 		require.NoError(t, os.Setenv("VAL", "foo"))
 		defer os.Clearenv()
 		err := Load(&cfg)
-		assert.EqualError(t, err, "unsupported type configloader.CustomType for field...")
+		assert.EqualError(t, err,
+			`failed to load struct { Val configloader.CustomType }:
+error processing field Val (configloader.CustomType): unsupported type configloader.CustomType`)
 	})
 
 	t.Run("fails with error from handler", func(t *testing.T) {
@@ -407,8 +411,8 @@ func TestWithTypeHandler(t *testing.T) {
 			return "", expectedErr
 		}))
 		assert.ErrorIs(t, err, expectedErr)
-		assert.EqualError(t, err, "parse error: expected")
-		// TODO: ErrorAd
+		assert.EqualError(t, err, `failed to load struct { Val configloader.CustomType }:
+error processing field Val (configloader.CustomType): expected`)
 	})
 
 	t.Run("support custom handler for primitive", func(t *testing.T) {
@@ -465,12 +469,10 @@ func TestWithEnv(t *testing.T) {
 		var cfg struct {
 			Val string
 		}
-		require.NoError(t, os.Setenv("VAL", "foo"))
-		defer os.Clearenv()
 
 		err := Load(&cfg, WithEnv(func(s string) (string, bool) {
 			assert.Equal(t, "VAL", s)
-			return "notFoo", false
+			return "notFoo", true
 		}))
 		require.NoError(t, err)
 		assert.Equal(t, "notFoo", cfg.Val)

@@ -40,14 +40,6 @@ func (f *Field) String() string {
 	return fmt.Sprintf("%s (%s)", strings.Join(f.Names(), "."), f.Value.Type().String())
 }
 
-type UnsupportedTypeError struct {
-	reflect.Type
-}
-
-func (e UnsupportedTypeError) Error() string {
-	return fmt.Sprintf("unsupported type %s", e.Type)
-}
-
 func defaultLoader() *Loader {
 	l := &Loader{
 		handlers:        make(map[reflect.Type]func(string) (any, error), 0),
@@ -62,17 +54,6 @@ func defaultLoader() *Loader {
 }
 
 type Option func(*Loader)
-
-var _ error = MissingEnvErr{}
-
-type MissingEnvErr struct {
-	Key   string
-	Field Field
-}
-
-func (m MissingEnvErr) Error() string {
-	return fmt.Sprintf("missing variable '%s' for the field '%s'", m.Key, m.Field.String())
-}
 
 // WithTypeHandler registers a custom type conversion function for a specific type T.
 // The function should convert a string environment value to type T, returning an error
@@ -212,11 +193,10 @@ func Load(value any, opts ...Option) error {
 	for _, opt := range opts {
 		opt(loader)
 	}
-
 	return loader.Load(value)
 }
 
-func (l *Loader) Load(val any) (errs error) {
+func (l *Loader) Load(val any) error {
 	ptrValue := reflect.ValueOf(val)
 	if ptrValue.Kind() != reflect.Pointer {
 		return fmt.Errorf("val must be a pointer, got '%s'", reflect.TypeOf(val).String())
@@ -225,21 +205,36 @@ func (l *Loader) Load(val any) (errs error) {
 		return fmt.Errorf("val cannot be nil")
 	}
 
+	errs := ConfigLoadError{
+		Value: ptrValue.Elem().Type(),
+	}
+
 	// Iterate over each leaf variables of the struct.
 	for variable := range traverse(Field{Value: ptrValue}, l.getChildren) {
-		value, err := l.lookup(l.keyName(variable), variable)
+		err := l.parse(variable)
 		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
-		}
-
-		err = l.set(value, variable)
-		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
+			errs.Add(FieldError{
+				Field: variable,
+				Err:   err,
+			})
 		}
 	}
-	return errs
+	if len(errs.Errors) > 0 {
+		return &errs
+	}
+	return nil
+}
+
+func (l *Loader) parse(variable Field) error {
+	value, err := l.lookup(l.keyName(variable), variable)
+	if err != nil {
+		return err
+	}
+	err = l.set(value, variable)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (l *Loader) keyName(variable Field) string {
@@ -357,7 +352,9 @@ func (l *Loader) lookup(key string, variable Field) (string, error) {
 	value, found := l.env(key)
 	if !found || value == "" {
 		if value, found = field.Tag.Lookup(l.defaultTag); !found {
-			return "", MissingEnvErr{Key: key, Field: variable}
+			return "", MissingEnvError{
+				Key: key,
+			}
 		}
 	}
 	return value, nil
@@ -370,7 +367,7 @@ func (l *Loader) set(value string, variable Field) error {
 	}
 	err = handler(variable.Value, value)
 	if err != nil {
-		return fmt.Errorf("parse error: %w", err)
+		return err
 	}
 	return nil
 }
