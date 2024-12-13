@@ -12,7 +12,7 @@ import (
 )
 
 type Loader struct {
-	prefix, nameTag, defaultTag string
+	prefix, nameTag, envTag, defaultTag string
 
 	// Type of conversion the struct field will take. Default is SnakeCase.
 	fieldConversion func(string) string
@@ -27,6 +27,10 @@ type Loader struct {
 type Field struct {
 	Value reflect.Value
 	Path  []reflect.StructField
+}
+
+func (f *Field) Last() reflect.StructField {
+	return f.Path[len(f.Path)-1]
 }
 
 func (f *Field) Names() (names []string) {
@@ -164,13 +168,21 @@ func (l *Loader) keyName(variable Field) string {
 	if l.prefix != "" {
 		names = append(names, l.prefix)
 	}
+
+	if name, found := variable.Last().Tag.Lookup(l.envTag); found {
+		return name
+	}
+
 	for _, field := range variable.Path {
-		if name, found := field.Tag.Lookup(l.nameTag); found {
-			// TODO: Does it make sense to replace the whole name?
-			names = []string{name}
-			break
+		if _, found := variable.Last().Tag.Lookup(l.envTag); found {
+			panic("TODO")
 		}
-		names = append(names, l.fieldConversion(field.Name))
+		if value, found := field.Tag.Lookup(l.nameTag); found {
+			names = append(names, value)
+		} else {
+			names = append(names, l.fieldConversion(field.Name))
+		}
+
 	}
 	key := strings.Join(names, "_")
 	return key

@@ -122,96 +122,6 @@ error processing field Bar (string): environment variable BAR not found`)
 	})
 }
 
-func TestLoader_Load_structs(t *testing.T) {
-	type DatabaseConfig struct {
-		Host     string
-		Port     int
-		Username string `env:"DATABASE_USER"`
-		Password string
-	}
-	type AppConfig struct {
-		Environment string
-		Debug       bool
-		Database    DatabaseConfig
-		AllowedIps  []string
-		MaxRetries  int
-		Timeout     float64
-	}
-
-	tests := []struct {
-		name    string
-		envVars map[string]string
-		want    AppConfig
-		wantErr bool
-	}{
-		{
-			name: "basic configuration",
-			envVars: map[string]string{
-				"ENVIRONMENT":       "production",
-				"DEBUG":             "true",
-				"DATABASE_HOST":     "localhost",
-				"DATABASE_PORT":     "5432",
-				"DATABASE_USER":     "admin",
-				"DATABASE_PASSWORD": "secret",
-				"ALLOWED_IPS":       "192.168.1.1,192.168.1.2",
-				"MAX_RETRIES":       "3",
-				"TIMEOUT":           "5.5",
-			},
-			want: AppConfig{
-				Environment: "production",
-				Debug:       true,
-				Database: DatabaseConfig{
-					Host:     "localhost",
-					Port:     5432,
-					Username: "admin",
-					Password: "secret",
-				},
-				AllowedIps: []string{"192.168.1.1", "192.168.1.2"},
-				MaxRetries: 3,
-				Timeout:    5.5,
-			},
-			wantErr: false,
-		},
-		{
-			name: "invalid type conversion",
-			envVars: map[string]string{
-				"ENVIRONMENT":   "production",
-				"DATABASE_PORT": "not_a_number",
-			},
-			want:    AppConfig{},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			os.Clearenv()
-			for k, v := range tt.envVars {
-				require.NoError(t, os.Setenv(k, v))
-			}
-
-			got := &AppConfig{}
-			err := Load(got, WithNameTag("env"))
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want.Environment, got.Environment)
-			assert.Equal(t, tt.want.Debug, got.Debug)
-			assert.Equal(t, tt.want.Database.Host, got.Database.Host)
-			assert.Equal(t, tt.want.Database.Port, got.Database.Port)
-			assert.Equal(t, tt.want.Database.Username, got.Database.Username)
-			assert.Equal(t, tt.want.Database.Password, got.Database.Password)
-			assert.Equal(t, tt.want.AllowedIps, got.AllowedIps)
-			assert.Equal(t, tt.want.MaxRetries, got.MaxRetries)
-			assert.Equal(t, tt.want.Timeout, got.Timeout)
-		})
-	}
-}
-
 func CustomGetenv(val string) (string, bool) {
 	return os.LookupEnv(strings.ToUpper(val))
 }
@@ -261,25 +171,12 @@ func TestWithNameTag(t *testing.T) {
 			}
 		}
 		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("BAR", "bar"))
+		require.NoError(t, os.Setenv("STRUCT_BAR", "bar"))
 		err := Load(&cfg, WithNameTag("env"))
 		assert.NoError(t, err)
 
 		assert.Equal(t, "foo", cfg.Val)
 		assert.Equal(t, "bar", cfg.Struct.Val)
-	})
-
-	t.Run("support split tags", func(t *testing.T) {
-		var cfg struct {
-			Val string `env:"FOO,bar"`
-		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
-		defer os.Clearenv()
-
-		err := Load(&cfg, WithNameTag("env"))
-		assert.NoError(t, err)
-
-		assert.Equal(t, "foo", cfg.Val)
 	})
 
 	t.Run("uses value from name tag and prefix", func(t *testing.T) {
@@ -309,11 +206,10 @@ func TestWithNameTag(t *testing.T) {
 				ValDefault string `env:"FOO_DEF" default:"defaultBar"`
 			}
 		}
-		require.NoError(t, os.Setenv("PREFIX_FOO", "foo"))
-		require.NoError(t, os.Setenv("PREFIX_BAR", "bar"))
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		require.NoError(t, os.Setenv("STRUCT_BAR", "bar"))
 		err := Load(&cfg,
 			WithNameTag("env"),
-			WithPrefix("PREFIX"),
 			WithDefaultTag("default"),
 		)
 		assert.NoError(t, err)

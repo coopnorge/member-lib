@@ -22,19 +22,59 @@ func WithTypeHandler[T any](f func(string) (T, error)) Option {
 	}
 }
 
-// WithNameTag sets the struct tag that can be used to override the environment variable name
-// for a field. If a field has this tag, its value will be used as the exact environment variable
-// name, ignoring any prefix and name conversion.
+// WithNameTag sets the struct tag used to override a field's name in the environment variable path.
+// The tag value replaces just the field's name segment while still following the normal path construction
+// rules (prefix + path + name).
 //
-// Example:
+// Example with WithNameTag("name"):
 //
 //	type Config struct {
-//	    Host string `env:"SERVICE_HOST"` // Will look for SERVICE_HOST environment variable
+//	    Database struct {
+//	        Host string `name:"HOSTNAME"` // Looks for DATABASE_HOSTNAME
+//	    }
 //	}
-//	configloader.Load(&cfg, WithNameTag("env"))
+//	configloader.Load(&cfg)
+//
+// Example with both prefix and name tag:
+//
+//	type Config struct {
+//	    Database struct {
+//	        Host string `name:"HOSTNAME"` // Looks for APP_DATABASE_HOSTNAME
+//	    }
+//	}
+//	configloader.Load(&cfg, WithPrefix("APP"))
 func WithNameTag(tag string) Option {
 	return func(l *Loader) {
 		l.nameTag = tag
+	}
+}
+
+// WithEnvTag sets the struct tag used to completely override the environment variable name for a field.
+// When a field has this tag, its value is used as-is for the environment variable name, bypassing all
+// other name construction rules including prefixes and path building.
+//
+// Example with WithEnvTag("env"):
+//
+//	type Config struct {
+//	    Database struct {
+//	        // Despite nesting, looks directly for "DB_HOST"
+//	        Host string `env:"DB_HOST"`
+//	    }
+//	}
+//	configloader.Load(&cfg)
+//
+// Example showing prefix is ignored with env tag:
+//
+//	type Config struct {
+//	    Database struct {
+//	        // Still only looks for "DB_HOST", prefix is not applied
+//	        Host string `env:"DB_HOST"`
+//	    }
+//	}
+//	configloader.Load(&cfg, WithPrefix("APP"))
+func WithEnvTag(tag string) Option {
+	return func(l *Loader) {
+		l.envTag = tag
 	}
 }
 
