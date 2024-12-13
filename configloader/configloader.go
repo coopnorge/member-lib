@@ -152,7 +152,11 @@ func (l *Loader) Load(val any) error {
 }
 
 func (l *Loader) parse(variable Field) error {
-	value, err := l.lookup(l.keyName(variable), variable)
+	name, err := l.keyName(variable)
+	if err != nil {
+		return err
+	}
+	value, err := l.lookup(name, variable)
 	if err != nil {
 		return err
 	}
@@ -163,20 +167,28 @@ func (l *Loader) parse(variable Field) error {
 	return nil
 }
 
-func (l *Loader) keyName(variable Field) string {
+func (l *Loader) keyName(variable Field) (string, error) {
 	var names []string
 	if l.prefix != "" {
 		names = append(names, l.prefix)
 	}
 
+	// Env not last.
+	var fieldsWithEnv []reflect.StructField
+	for _, field := range variable.Path[:len(variable.Path)-1] {
+		if _, found := field.Tag.Lookup(l.envTag); found {
+			fieldsWithEnv = append(fieldsWithEnv, field)
+		}
+	}
+	if len(fieldsWithEnv) > 0 {
+		return "", fmt.Errorf("´%s´ tag need to be at the end: %v", l.envTag, fieldsWithEnv)
+	}
+
 	if name, found := variable.Last().Tag.Lookup(l.envTag); found {
-		return name
+		return name, nil
 	}
 
 	for _, field := range variable.Path {
-		if _, found := variable.Last().Tag.Lookup(l.envTag); found {
-			panic("TODO")
-		}
 		if value, found := field.Tag.Lookup(l.nameTag); found {
 			names = append(names, value)
 		} else {
@@ -185,7 +197,7 @@ func (l *Loader) keyName(variable Field) string {
 
 	}
 	key := strings.Join(names, "_")
-	return key
+	return key, nil
 }
 
 func (l *Loader) handler(typ reflect.Type) (func(reflect.Value, string) error, error) {

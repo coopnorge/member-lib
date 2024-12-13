@@ -165,14 +165,14 @@ func TestWithPrefix(t *testing.T) {
 func TestWithNameTag(t *testing.T) {
 	t.Run("uses value from name tag", func(t *testing.T) {
 		var cfg struct {
-			Val    string `env:"FOO"`
+			Val    string `name:"FOO"`
 			Struct struct {
-				Val string `env:"BAR"`
+				Val string `name:"BAR"`
 			}
 		}
 		require.NoError(t, os.Setenv("FOO", "foo"))
 		require.NoError(t, os.Setenv("STRUCT_BAR", "bar"))
-		err := Load(&cfg, WithNameTag("env"))
+		err := Load(&cfg, WithNameTag("name"))
 		assert.NoError(t, err)
 
 		assert.Equal(t, "foo", cfg.Val)
@@ -181,16 +181,75 @@ func TestWithNameTag(t *testing.T) {
 
 	t.Run("uses value from name tag and prefix", func(t *testing.T) {
 		var cfg struct {
-			Val    string `env:"FOO"`
+			Val    string `name:"FOO"`
 			Struct struct {
-				Val string `env:"BAR"`
+				Val string `name:"BAR"`
 			}
 		}
 		require.NoError(t, os.Setenv("PREFIX_FOO", "foo"))
 		require.NoError(t, os.Setenv("PREFIX_STRUCT_BAR", "bar"))
 		defer os.Clearenv()
 
-		err := Load(&cfg, WithNameTag("env"), WithPrefix("PREFIX"))
+		err := Load(&cfg, WithNameTag("name"), WithPrefix("PREFIX"))
+		assert.NoError(t, err)
+
+		assert.Equal(t, "foo", cfg.Val)
+		assert.Equal(t, "bar", cfg.Struct.Val)
+	})
+
+	t.Run("uses default value", func(t *testing.T) {
+		var cfg struct {
+			Val        string `name:"FOO"`
+			ValDefault string `name:"FOO_DEF" default:"defaultFoo"`
+			Struct     struct {
+				Val        string `name:"BAR"`
+				ValDefault string `name:"FOO_DEF" default:"defaultBar"`
+			}
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		require.NoError(t, os.Setenv("STRUCT_BAR", "bar"))
+		err := Load(&cfg,
+			WithNameTag("name"),
+			WithDefaultTag("default"),
+		)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "foo", cfg.Val)
+		assert.Equal(t, "bar", cfg.Struct.Val)
+		assert.Equal(t, "defaultFoo", cfg.ValDefault)
+		assert.Equal(t, "defaultBar", cfg.Struct.ValDefault)
+	})
+}
+
+func TestWithEnvTag(t *testing.T) {
+	t.Run("uses value from env tag", func(t *testing.T) {
+		var cfg struct {
+			Val    string `env:"FOO"`
+			Struct struct {
+				Val string `env:"BAR"`
+			}
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		require.NoError(t, os.Setenv("BAR", "bar"))
+		err := Load(&cfg, WithEnvTag("env"))
+		assert.NoError(t, err)
+
+		assert.Equal(t, "foo", cfg.Val)
+		assert.Equal(t, "bar", cfg.Struct.Val)
+	})
+
+	t.Run("uses value from name tag not the prefix", func(t *testing.T) {
+		var cfg struct {
+			Val    string `env:"FOO"`
+			Struct struct {
+				Val string `env:"BAR"`
+			}
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		require.NoError(t, os.Setenv("BAR", "bar"))
+		defer os.Clearenv()
+
+		err := Load(&cfg, WithEnvTag("env"), WithPrefix("PREFIX"))
 		assert.NoError(t, err)
 
 		assert.Equal(t, "foo", cfg.Val)
@@ -207,9 +266,9 @@ func TestWithNameTag(t *testing.T) {
 			}
 		}
 		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("STRUCT_BAR", "bar"))
+		require.NoError(t, os.Setenv("BAR", "bar"))
 		err := Load(&cfg,
-			WithNameTag("env"),
+			WithEnvTag("env"),
 			WithDefaultTag("default"),
 		)
 		assert.NoError(t, err)
@@ -218,6 +277,23 @@ func TestWithNameTag(t *testing.T) {
 		assert.Equal(t, "bar", cfg.Struct.Val)
 		assert.Equal(t, "defaultFoo", cfg.ValDefault)
 		assert.Equal(t, "defaultBar", cfg.Struct.ValDefault)
+	})
+
+	t.Run("fails if using on struct", func(t *testing.T) {
+		type Test struct {
+			Val string
+		}
+		var cfg struct {
+			Val    string `env:"FOO"`
+			Struct Test   `env:"SHOULD_FAIL"`
+		}
+		require.NoError(t, os.Setenv("FOO", "foo"))
+		require.NoError(t, os.Setenv("BAR", "bar"))
+		err := Load(&cfg,
+			WithEnvTag("env"),
+			WithDefaultTag("default"),
+		)
+		assert.EqualError(t, err, "failed to load struct { Val string \"env:\\\"FOO\\\"\"; Struct configloader.Test \"env:\\\"SHOULD_FAIL\\\"\" }:\nerror processing field Struct.Val (string): ´env´ tag need to be at the end: [{Struct  configloader.Test env:\"SHOULD_FAIL\" 16 [1] false}]")
 	})
 }
 
@@ -320,6 +396,24 @@ error processing field Val (configloader.CustomType): unsupported type configloa
 		assert.ErrorIs(t, err, expectedErr)
 		assert.EqualError(t, err, `failed to load struct { Val configloader.CustomType }:
 error processing field Val (configloader.CustomType): expected`)
+	})
+
+	t.Run("fails with element of slice", func(t *testing.T) {
+		type CustomType string
+		var cfg struct {
+			Val []CustomType
+		}
+		require.NoError(t, os.Setenv("VAL", "foo,foo"))
+		defer os.Clearenv()
+
+		expectedErr := errors.New("expected")
+		err := Load(&cfg, WithTypeHandler(func(val string) (CustomType, error) {
+			assert.Equal(t, "foo", val)
+			return "", expectedErr
+		}))
+		assert.ErrorIs(t, err, expectedErr)
+		assert.EqualError(t, err, `failed to load struct { Val configloader.CustomType }:
+error processing field Val (configloader.CustomType): expected\nexpected`)
 	})
 
 	t.Run("support custom handler for primitive", func(t *testing.T) {
