@@ -16,7 +16,7 @@ func TestLoader_Load(t *testing.T) {
 		var cfg struct {
 			Foo string
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
+		t.Setenv("FOO", "foo")
 		defer os.Clearenv()
 
 		err := Load(&cfg)
@@ -28,7 +28,7 @@ func TestLoader_Load(t *testing.T) {
 		var cfg struct {
 			Foo *string
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
+		t.Setenv("FOO", "foo")
 		defer os.Clearenv()
 
 		err := Load(&cfg)
@@ -40,7 +40,7 @@ func TestLoader_Load(t *testing.T) {
 		var cfg struct {
 			Foo []string
 		}
-		require.NoError(t, os.Setenv("FOO", "foo,bar"))
+		t.Setenv("FOO", "foo,bar")
 		defer os.Clearenv()
 
 		err := Load(&cfg)
@@ -54,7 +54,7 @@ func TestLoader_Load(t *testing.T) {
 				Foo string
 			}
 		}
-		require.NoError(t, os.Setenv("INNER_FOO", "foo"))
+		t.Setenv("INNER_FOO", "foo")
 		defer os.Clearenv()
 
 		err := Load(&cfg)
@@ -68,7 +68,7 @@ func TestLoader_Load(t *testing.T) {
 				Foo string
 			}
 		}
-		require.NoError(t, os.Setenv("INNER_FOO", "foo"))
+		t.Setenv("INNER_FOO", "foo")
 		defer os.Clearenv()
 
 		err := Load(&cfg)
@@ -84,8 +84,8 @@ func TestLoader_Load(t *testing.T) {
 			Test
 			Inner Test
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("INNER_FOO", "foo"))
+		t.Setenv("FOO", "foo")
+		t.Setenv("INNER_FOO", "foo")
 		defer os.Clearenv()
 
 		err := Load(&cfg)
@@ -134,8 +134,8 @@ func TestWithPrefixTag(t *testing.T) {
 		}
 	}
 
-	require.NoError(t, os.Setenv("TEST_FOO", "fooEnv"))
-	require.NoError(t, os.Setenv("TEST_BAR_BAZ", "bazEnv"))
+	t.Setenv("TEST_FOO", "fooEnv")
+	t.Setenv("TEST_BAR_BAZ", "bazEnv")
 
 	err := Load(&cfg, WithPrefix("TEST"), WithEnv(CustomGetenv))
 	assert.NoError(t, err)
@@ -152,8 +152,8 @@ func TestWithPrefix(t *testing.T) {
 				Val string
 			}
 		}
-		require.NoError(t, os.Setenv("PREFIX_VAL", "bar"))
-		require.NoError(t, os.Setenv("PREFIX_STRUCT_VAL", "bar"))
+		t.Setenv("PREFIX_VAL", "bar")
+		t.Setenv("PREFIX_STRUCT_VAL", "bar")
 		err := Load(&cfg, WithPrefix("PREFIX"))
 		assert.NoError(t, err)
 
@@ -170,8 +170,8 @@ func TestWithNameTag(t *testing.T) {
 				Val string `name:"BAR"`
 			}
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("STRUCT_BAR", "bar"))
+		t.Setenv("FOO", "foo")
+		t.Setenv("STRUCT_BAR", "bar")
 		err := Load(&cfg, WithNameTag("name"))
 		assert.NoError(t, err)
 
@@ -186,8 +186,8 @@ func TestWithNameTag(t *testing.T) {
 				Val string `name:"BAR"`
 			}
 		}
-		require.NoError(t, os.Setenv("PREFIX_FOO", "foo"))
-		require.NoError(t, os.Setenv("PREFIX_STRUCT_BAR", "bar"))
+		t.Setenv("PREFIX_FOO", "foo")
+		t.Setenv("PREFIX_STRUCT_BAR", "bar")
 		defer os.Clearenv()
 
 		err := Load(&cfg, WithNameTag("name"), WithPrefix("PREFIX"))
@@ -206,8 +206,8 @@ func TestWithNameTag(t *testing.T) {
 				ValDefault string `name:"FOO_DEF" default:"defaultBar"`
 			}
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("STRUCT_BAR", "bar"))
+		t.Setenv("FOO", "foo")
+		t.Setenv("STRUCT_BAR", "bar")
 		err := Load(&cfg,
 			WithNameTag("name"),
 			WithDefaultTag("default"),
@@ -229,8 +229,8 @@ func TestWithEnvTag(t *testing.T) {
 				Val string `env:"BAR"`
 			}
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("BAR", "bar"))
+		t.Setenv("FOO", "foo")
+		t.Setenv("BAR", "bar")
 		err := Load(&cfg, WithEnvTag("env"))
 		assert.NoError(t, err)
 
@@ -245,8 +245,8 @@ func TestWithEnvTag(t *testing.T) {
 				Val string `env:"BAR"`
 			}
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("BAR", "bar"))
+		t.Setenv("FOO", "foo")
+		t.Setenv("BAR", "bar")
 		defer os.Clearenv()
 
 		err := Load(&cfg, WithEnvTag("env"), WithPrefix("PREFIX"))
@@ -265,8 +265,8 @@ func TestWithEnvTag(t *testing.T) {
 				ValDefault string `env:"FOO_DEF" default:"defaultBar"`
 			}
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("BAR", "bar"))
+		t.Setenv("FOO", "foo")
+		t.Setenv("BAR", "bar")
 		err := Load(&cfg,
 			WithEnvTag("env"),
 			WithDefaultTag("default"),
@@ -287,8 +287,8 @@ func TestWithEnvTag(t *testing.T) {
 			Val    string `env:"FOO"`
 			Struct Test   `env:"SHOULD_FAIL"`
 		}
-		require.NoError(t, os.Setenv("FOO", "foo"))
-		require.NoError(t, os.Setenv("BAR", "bar"))
+		t.Setenv("FOO", "foo")
+		t.Setenv("BAR", "bar")
 		err := Load(&cfg,
 			WithEnvTag("env"),
 			WithDefaultTag("default"),
@@ -336,8 +336,8 @@ func TestWithDefaultTag(t *testing.T) {
 			}
 		}
 
-		require.NoError(t, os.Setenv("FOO", "fooEnv"))
-		require.NoError(t, os.Setenv("BAR_BAZ", "bazEnv"))
+		t.Setenv("FOO", "fooEnv")
+		t.Setenv("BAR_BAZ", "bazEnv")
 
 		err := Load(&cfg, WithEnv(CustomGetenv))
 		assert.NoError(t, err)
@@ -372,7 +372,7 @@ func TestWithTypeHandler(t *testing.T) {
 		var cfg struct {
 			Val CustomType
 		}
-		require.NoError(t, os.Setenv("VAL", "foo"))
+		t.Setenv("VAL", "foo")
 		defer os.Clearenv()
 		err := Load(&cfg)
 		assert.EqualError(t, err,
@@ -385,7 +385,7 @@ error processing field Val (configloader.CustomType): unsupported type configloa
 		var cfg struct {
 			Val CustomType
 		}
-		require.NoError(t, os.Setenv("VAL", "foo"))
+		t.Setenv("VAL", "foo")
 		defer os.Clearenv()
 
 		expectedErr := errors.New("expected")
@@ -403,7 +403,7 @@ error processing field Val (configloader.CustomType): expected`)
 		var cfg struct {
 			Val []CustomType
 		}
-		require.NoError(t, os.Setenv("VAL", "foo,foo"))
+		t.Setenv("VAL", "foo,foo")
 		defer os.Clearenv()
 
 		expectedErr := errors.New("expected")
@@ -412,8 +412,7 @@ error processing field Val (configloader.CustomType): expected`)
 			return "", expectedErr
 		}))
 		assert.ErrorIs(t, err, expectedErr)
-		assert.EqualError(t, err, `failed to load struct { Val configloader.CustomType }:
-error processing field Val (configloader.CustomType): expected\nexpected`)
+		assert.EqualError(t, err, "failed to load struct { Val []configloader.CustomType }:\nerror processing field Val ([]configloader.CustomType): expected\nexpected")
 	})
 
 	t.Run("support custom handler for primitive", func(t *testing.T) {
@@ -423,9 +422,9 @@ error processing field Val (configloader.CustomType): expected\nexpected`)
 			ValPtr   *AnotherString
 			ValSlice []AnotherString
 		}
-		require.NoError(t, os.Setenv("VAL", "foo"))
-		require.NoError(t, os.Setenv("VAL_PTR", "foo"))
-		require.NoError(t, os.Setenv("VAL_SLICE", "foo,foo"))
+		t.Setenv("VAL", "foo")
+		t.Setenv("VAL_PTR", "foo")
+		t.Setenv("VAL_SLICE", "foo,foo")
 		defer os.Clearenv()
 
 		err := Load(&cfg, WithTypeHandler(func(val string) (AnotherString, error) {
@@ -448,9 +447,9 @@ error processing field Val (configloader.CustomType): expected\nexpected`)
 			ValPtr   *Test
 			ValSlice []Test
 		}
-		require.NoError(t, os.Setenv("VAL", "foo"))
-		require.NoError(t, os.Setenv("VAL_PTR", "foo"))
-		require.NoError(t, os.Setenv("VAL_SLICE", "foo,foo"))
+		t.Setenv("VAL", "foo")
+		t.Setenv("VAL_PTR", "foo")
+		t.Setenv("VAL_SLICE", "foo,foo")
 		defer os.Clearenv()
 
 		err := Load(&cfg, WithTypeHandler(func(val string) (Test, error) {
