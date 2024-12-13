@@ -91,7 +91,7 @@ func TestLoader_Load(t *testing.T) {
 		err := Load(&cfg)
 		require.NoError(t, err)
 		assert.Equal(t, "foo", cfg.Inner.Foo)
-		assert.Equal(t, "foo", cfg.Test)
+		assert.Equal(t, "foo", cfg.Test.Foo)
 		assert.Equal(t, "foo", cfg.Foo)
 	})
 
@@ -108,6 +108,17 @@ func TestLoader_Load(t *testing.T) {
 		}
 		var cfg *Test
 		assert.EqualError(t, Load(cfg), "val cannot be nil")
+	})
+
+	t.Run("fails if environment not found", func(t *testing.T) {
+		type Test struct {
+			Foo string
+			Bar string
+		}
+		var cfg Test
+		assert.EqualError(t, Load(&cfg), `failed to load configloader.Test:
+error processing field Foo (string): environment variable FOO not found
+error processing field Bar (string): environment variable BAR not found`)
 	})
 }
 

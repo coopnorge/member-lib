@@ -256,13 +256,22 @@ func (l *Loader) getChildren(current Field) []Field {
 		for i := 0; i < current.Value.NumField(); i++ {
 			fv := current.Value.Field(i)
 			ft := current.Value.Type().Field(i)
+
 			if !fv.CanSet() || !fv.IsValid() {
 				continue
 			}
-			children = append(children, Field{
-				Value: fv,
-				Path:  append(current.Path, ft),
-			})
+			if ft.Anonymous {
+				children = append(children, Field{
+					Value: fv,
+					Path:  current.Path,
+				})
+			} else {
+				children = append(children, Field{
+					Value: fv,
+					Path:  append(current.Path, ft),
+				})
+			}
+
 		}
 		return children
 	}
