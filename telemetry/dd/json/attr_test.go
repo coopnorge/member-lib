@@ -14,14 +14,14 @@ func Test_attrSliceToMap(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *map[string]any
+		want map[string]any
 	}{
 		{
 			name: "string attribute",
 			args: args{attributes: []attribute.KeyValue{
 				attribute.String("key", "value"),
 			}},
-			want: &map[string]any{
+			want: map[string]any{
 				"key": "value",
 			},
 		},
@@ -30,7 +30,7 @@ func Test_attrSliceToMap(t *testing.T) {
 			args: args{attributes: []attribute.KeyValue{
 				attribute.Int64("key", 123),
 			}},
-			want: &map[string]any{
+			want: map[string]any{
 				"key": int64(123),
 			},
 		},
@@ -39,7 +39,7 @@ func Test_attrSliceToMap(t *testing.T) {
 			args: args{attributes: []attribute.KeyValue{
 				attribute.Bool("key", true),
 			}},
-			want: &map[string]any{
+			want: map[string]any{
 				"key": true,
 			},
 		},
@@ -48,7 +48,7 @@ func Test_attrSliceToMap(t *testing.T) {
 			args: args{attributes: []attribute.KeyValue{
 				attribute.Float64("key", 123.456),
 			}},
-			want: &map[string]any{
+			want: map[string]any{
 				"key": 123.456,
 			},
 		},
@@ -60,7 +60,7 @@ func Test_attrSliceToMap(t *testing.T) {
 				attribute.Bool("bool", true),
 				attribute.Float64("float", 123.456),
 			}},
-			want: &map[string]any{
+			want: map[string]any{
 				"str":   "value",
 				"int":   int64(123),
 				"bool":  true,
@@ -82,14 +82,14 @@ func Test_attrSetToMap(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *map[string]any
+		want map[string]any
 	}{
 		{
 			name: "set with single attribute",
 			args: args{attributes: attribute.NewSet(
 				attribute.String("key", "value"),
 			)},
-			want: &map[string]any{
+			want: map[string]any{
 				"key": "value",
 			},
 		},
@@ -101,7 +101,7 @@ func Test_attrSetToMap(t *testing.T) {
 				attribute.Bool("bool", true),
 				attribute.Float64("float", 123.456),
 			)},
-			want: &map[string]any{
+			want: map[string]any{
 				"str":   "value",
 				"int":   int64(123),
 				"bool":  true,

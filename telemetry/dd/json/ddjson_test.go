@@ -103,7 +103,7 @@ func datadogTraceID(id trace2.TraceID) uint64 {
 
 func setupLogger(t *testing.T, res *resource.Resource) (*slog.Logger, func() string) {
 	var buf strings.Builder
-	exporter := NewJsonExporter(&buf)
+	exporter := NewJSONExporter(&buf)
 	provider := sdklog.NewLoggerProvider(
 		sdklog.WithResource(res),
 		sdklog.WithProcessor(sdklog.NewSimpleProcessor(exporter)),
@@ -124,7 +124,7 @@ func Test_jsonRecord(t *testing.T) {
 		ObservedTime: LogTime(time.UnixMilli(987654321)),
 		DDTraceID:    "",
 		DDSpanID:     "",
-		Attributes: &map[string]value{
+		Attributes: map[string]value{
 			"test": newValue(log.MapValue(log.Int("key", 123)))},
 	}
 
@@ -155,7 +155,7 @@ func Test_convert(t *testing.T) {
 		},
 	}.NewRecord()
 
-	val := convert(r)
+	val := convert(&r)
 	var buf strings.Builder
 	e := json.NewEncoder(&buf)
 	e.SetIndent("", "  ")

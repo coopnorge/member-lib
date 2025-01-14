@@ -84,7 +84,7 @@ func Exporters(_ context.Context, res *resource.Resource, traceURL, metricURL st
 		return nil, nil, nil, err
 	}
 
-	le = ljson.NewJsonExporter(os.Stderr)
+	le = ljson.NewJSONExporter(os.Stderr)
 	return te, me, le, nil
 }
 

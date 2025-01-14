@@ -2,7 +2,7 @@ package json
 
 import "go.opentelemetry.io/otel/attribute"
 
-func attrSliceToMap(attributes []attribute.KeyValue) *map[string]any {
+func attrSliceToMap(attributes []attribute.KeyValue) map[string]any {
 	if len(attributes) == 0 {
 		return nil
 	}
@@ -10,9 +10,9 @@ func attrSliceToMap(attributes []attribute.KeyValue) *map[string]any {
 	for _, kv := range attributes {
 		attrs[string(kv.Key)] = kv.Value.AsInterface()
 	}
-	return &attrs
+	return attrs
 }
 
-func attrSetToMap(attributes attribute.Set) *map[string]any {
+func attrSetToMap(attributes attribute.Set) map[string]any {
 	return attrSliceToMap(attributes.ToSlice())
 }

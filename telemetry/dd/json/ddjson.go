@@ -20,7 +20,7 @@ type jsonExporter struct {
 	encoder json.Encoder
 }
 
-func NewJsonExporter(w io.Writer) sdklog.Exporter {
+func NewJSONExporter(w io.Writer) sdklog.Exporter {
 	b := bufio.NewWriter(w)
 	return &jsonExporter{
 		flush:   b.Flush,
@@ -30,8 +30,8 @@ func NewJsonExporter(w io.Writer) sdklog.Exporter {
 
 // Export implements log.Exporter.
 func (j *jsonExporter) Export(_ context.Context, records []sdklog.Record) error {
-	for _, record := range records {
-		err := j.encoder.Encode(convert(record))
+	for i := 0; i < len(records); i++ {
+		err := j.encoder.Encode(convert(&records[i]))
 		if err != nil {
 			return err
 		}
@@ -39,7 +39,7 @@ func (j *jsonExporter) Export(_ context.Context, records []sdklog.Record) error 
 	return nil
 }
 
-func convert(record sdklog.Record) jsonRecord {
+func convert(record *sdklog.Record) jsonRecord {
 	entry := jsonRecord{
 		Msg:          record.Body().AsString(),
 		Level:        record.Severity().String(),
@@ -77,16 +77,16 @@ func convert(record sdklog.Record) jsonRecord {
 			attrs[kv.Key] = newValue(kv.Value)
 			return true
 		})
-		entry.Attributes = &attrs
+		entry.Attributes = attrs
 	}
 	return entry
 }
 
 type jsonScope struct {
-	SchemaURL  string          `json:"schema_url"`
-	Name       string          `json:"name"`
-	Version    string          `json:"version"`
-	Attributes *map[string]any `json:"attributes,omitempty"`
+	SchemaURL  string         `json:"schema_url"`
+	Name       string         `json:"name"`
+	Version    string         `json:"version"`
+	Attributes map[string]any `json:"attributes,omitempty"`
 }
 
 type jsonRecord struct {
@@ -101,12 +101,12 @@ type jsonRecord struct {
 	DDTraceID string `json:"dd.trace_id,omitempty"`
 	DDSpanID  string `json:"dd.span_id,omitempty"`
 
-	Attributes *map[string]value `json:"attributes,omitempty"`
+	Attributes map[string]value `json:"attributes,omitempty"`
 }
 
 type jsonResource struct {
-	SchemaURL  string          `json:"schema.url"`
-	Attributes *map[string]any `json:"attributes,omitempty"`
+	SchemaURL  string         `json:"schema.url"`
+	Attributes map[string]any `json:"attributes,omitempty"`
 }
 
 // ForceFlush implements log.Exporter.
