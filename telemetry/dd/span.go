@@ -8,13 +8,21 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
 )
 
+// Passing a "fake" child relationship so that the trace id generation
+// doesn't kick in. If not, the datadog lib cannot connect the traces.
 func getParent(span trace.ReadOnlySpan) ddtrace.SpanContextW3C {
 	if parent := span.Parent(); parent.IsValid() {
 		return ctxWrapper{otelCtx: parent}
 	}
-	// Passing a "fake" child relationship so that the trace id generation
-	// doesn't kick in. If not, the datadog lib
 	return noParent{ctxWrapper{span.SpanContext()}}
+}
+
+func DatadogSpanID(id trace2.SpanID) uint64 {
+	return binary.BigEndian.Uint64(id[8:])
+}
+
+func DatadogTraceID(id trace2.TraceID) uint64 {
+	return binary.BigEndian.Uint64(id[:])
 }
 
 var _ ddtrace.SpanContextW3C = &ctxWrapper{}

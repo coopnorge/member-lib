@@ -11,6 +11,10 @@ type value struct {
 	log.Value
 }
 
+func newValue(v log.Value) value {
+	return value{Value: v}
+}
+
 // MarshalJSON implements a custom marshal function to encode log.Value.
 func (v value) MarshalJSON() ([]byte, error) {
 	var val any

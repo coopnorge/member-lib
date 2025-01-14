@@ -24,6 +24,7 @@ func Test_value_MarshalJSON(t *testing.T) {
 		{"Bytes", log.BytesValue([]byte("bytes")), `"Ynl0ZXM="`, assert.NoError},
 		{"Map", log.MapValue(log.String("key", "value")), `{"key":"value"}`, assert.NoError},
 		{"Map of map", log.MapValue(log.Map("key1", log.String("key2", "value"))), `{"key1":{"key2":"value"}}`, assert.NoError},
+		{"Map of map of map", log.MapValue(log.Map("key1", log.Map("key2", log.String("key3", "value")))), `{"key1":{"key2":{"key3":"value"}}}`, assert.NoError},
 		{"Slice", log.SliceValue(log.StringValue("value"), log.IntValue(1234)), `["value",1234]`, assert.NoError},
 		{"Slice of slice", log.SliceValue(log.SliceValue(log.StringValue("value")), log.IntValue(1234)), `[["value"],1234]`, assert.NoError},
 	}

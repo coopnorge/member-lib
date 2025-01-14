@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/DataDog/datadog-go/v5/statsd"
-
 	"os"
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+	"github.com/DataDog/datadog-go/v5/statsd"
+	ljson "github.com/coopnorge/member-lib/telemetry/dd/json"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -86,11 +84,7 @@ func Exporters(_ context.Context, res *resource.Resource, traceURL, metricURL st
 		return nil, nil, nil, err
 	}
 
-	le, err = stdoutlog.New()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
+	le = ljson.NewJsonExporter(os.Stderr)
 	return te, me, le, nil
 }
 
