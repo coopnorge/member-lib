@@ -14,7 +14,7 @@ func Test_LoadIP(t *testing.T) {
 	t.Setenv("ECOM_DEBUG", "true")
 
 	t.Setenv("ECOM_DATABASE_HOST", "localhost")
-	t.Setenv("ECOM_DATABASE_DB_USER", "Alfredo")
+	t.Setenv("ECOM_DATABASE_USER", "Alfredo")
 	t.Setenv("ECOM_DATABASE_PORT", "5432")
 	t.Setenv("ECOM_DATABASE_PASSWORD", "secret")
 
@@ -22,13 +22,15 @@ func Test_LoadIP(t *testing.T) {
 	t.Setenv("ECOM_SOME_IP", "10.0.0.3")
 	t.Setenv("ECOM_ALLOWED_IPS", "192.168.1.1,192.168.1.2")
 
+	t.Setenv("ECOM_COMP_TYPE", "1")
+
 	var cfg Config
 	err := configloader.Load(
 		&cfg,
 		configloader.WithPrefix("ECOM"),
 		configloader.WithNameTag("env"),
 		configloader.WithTypeHandler(IneedAdifferentWayToLoadIps),
+		configloader.WithTypeHandler(MyCustomTypeHandler),
 	)
 	assert.NoError(t, err)
-
 }
