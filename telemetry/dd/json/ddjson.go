@@ -36,7 +36,7 @@ func (j *jsonExporter) Export(_ context.Context, records []sdklog.Record) error 
 			return err
 		}
 	}
-	return nil
+	return j.flush()
 }
 
 func convert(record *sdklog.Record) jsonRecord {
