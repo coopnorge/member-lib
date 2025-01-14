@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/DataDog/datadog-go/v5/statsd"
-
 	"os"
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+	"github.com/DataDog/datadog-go/v5/statsd"
+	ljson "github.com/coopnorge/member-lib/telemetry/dd/json"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -28,7 +26,7 @@ func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL 
 
 	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(te, sdktrace.WithBatchTimeout(2*time.Second)),
+		sdktrace.WithBatcher(te, sdktrace.WithBatchTimeout(1*time.Second)),
 		sdktrace.WithResource(res),
 	)
 
@@ -38,8 +36,7 @@ func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL 
 	)
 
 	lp = sdklog.NewLoggerProvider(
-		sdklog.WithProcessor(NewDatadogProcessor()),
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(le)),
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(le, sdklog.WithExportInterval(1*time.Second))),
 		sdklog.WithResource(res),
 	)
 
@@ -86,11 +83,7 @@ func Exporters(_ context.Context, res *resource.Resource, traceURL, metricURL st
 		return nil, nil, nil, err
 	}
 
-	le, err = stdoutlog.New()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
+	le = ljson.NewJSONExporter(os.Stderr)
 	return te, me, le, nil
 }
 
