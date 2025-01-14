@@ -58,7 +58,7 @@ func TestJsonExporter_Export(t *testing.T) {
   "scope": "<ignore-diff>",
   "resource": "<ignore-diff>",
   "attributes": {
-    "code.filepath": "/Users/hadrien/Projects/member-lib/telemetry/dd/json/ddjson_test.go",
+    "code.filepath": "<ignore-diff>",
     "code.function": "func2",
     "code.lineno": "<ignore-diff>",
     "code.namespace": "github.com/coopnorge/member-lib/telemetry/dd/json.TestJsonExporter_Export",
