@@ -26,7 +26,7 @@ func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL 
 
 	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(te, sdktrace.WithBatchTimeout(2*time.Second)),
+		sdktrace.WithBatcher(te, sdktrace.WithBatchTimeout(1*time.Second)),
 		sdktrace.WithResource(res),
 	)
 
@@ -36,8 +36,7 @@ func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL 
 	)
 
 	lp = sdklog.NewLoggerProvider(
-		sdklog.WithProcessor(NewDatadogProcessor()),
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(le)),
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(le, sdklog.WithExportInterval(1*time.Second))),
 		sdklog.WithResource(res),
 	)
 
