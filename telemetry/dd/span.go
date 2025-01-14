@@ -17,14 +17,6 @@ func getParent(span trace.ReadOnlySpan) ddtrace.SpanContextW3C {
 	return noParent{ctxWrapper{span.SpanContext()}}
 }
 
-func DatadogSpanID(id trace2.SpanID) uint64 {
-	return binary.BigEndian.Uint64(id[8:])
-}
-
-func DatadogTraceID(id trace2.TraceID) uint64 {
-	return binary.BigEndian.Uint64(id[:])
-}
-
 var _ ddtrace.SpanContextW3C = &ctxWrapper{}
 
 // ctxWrapper converts open telemetry span context to ddtrace.SpanContextW3C.
