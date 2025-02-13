@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: codespell-project/actions-codespell@master
+      - uses: codespell-project/actions-codespell@fad9339798e1ee3fe979ae0a022c931786a408b8 # pin@master
         with:
           check_filenames: true
           skip: "./vendor,./telemetry,go.mod,go.sum"
