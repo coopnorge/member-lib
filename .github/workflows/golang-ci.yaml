@@ -1,6 +1,6 @@
 name: "Golang CI"
 on:
-  push: { }
+  push: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -62,3 +62,4 @@ jobs:
         name: "Catch errors"
         if: |
           needs.golang-ci.result == 'failure' || contains(needs.*.result, 'failure')
+    permissions: {}
