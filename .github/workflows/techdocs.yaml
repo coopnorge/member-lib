@@ -1,7 +1,6 @@
----
 name: "Technical documentation CI"
 on:
-  push: { }
+  push: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,6 +24,9 @@ jobs:
         run: |
           echo "::${{ steps.changes.outputs }}"
 
+    permissions:
+      contents: read
+      pull-requests: read
   techdocs:
     name: "TechDocs"
     needs: "setup"
@@ -47,3 +49,4 @@ jobs:
         name: "Catch errors"
         if: |
           needs.techdocs.result == 'failure'
+    permissions: {}
