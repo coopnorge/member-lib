@@ -9,7 +9,7 @@ permissions:
 jobs:
   codespell:
     name: "Check for spelling errors"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
     needs:
       - "codespell"
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: exit 1
         name: "Catch errors"

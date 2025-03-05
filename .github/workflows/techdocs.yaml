@@ -8,7 +8,7 @@ concurrency:
 
 jobs:
   setup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       is_docs_changed: ${{ steps.filter.outputs.docs }}
     steps:
@@ -43,7 +43,7 @@ jobs:
       - "setup"
       - "techdocs"
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: exit 1
         name: "Catch errors"
