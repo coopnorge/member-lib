@@ -7,7 +7,7 @@ concurrency:
 
 jobs:
   matrix-prep:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       paths: '["configloader","pkg", "telemetry"]'
     steps:
@@ -16,7 +16,7 @@ jobs:
   golang-ci:
     needs: matrix-prep
     name: "Lint Modules"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
@@ -36,7 +36,7 @@ jobs:
   gotest:
     needs: matrix-prep
     name: "Test Modules"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
@@ -56,7 +56,7 @@ jobs:
       - "golang-ci"
       - "gotest"
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: exit 1
         name: "Catch errors"
