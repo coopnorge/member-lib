@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       paths: '["configloader","pkg", "telemetry"]'
+    permissions: {}
     steps:
       - run: echo "Preparing matrix"
 
@@ -20,6 +21,8 @@ jobs:
     strategy:
       matrix:
         path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -40,6 +43,8 @@ jobs:
     strategy:
       matrix:
         path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
