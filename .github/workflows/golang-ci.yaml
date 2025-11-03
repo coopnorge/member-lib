@@ -1,6 +1,6 @@
 name: "Golang CI"
 on:
-  push: { }
+  push: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       paths: '["configloader","pkg", "telemetry"]'
+    permissions: {}
     steps:
       - run: echo "Preparing matrix"
 
@@ -20,14 +21,16 @@ jobs:
     strategy:
       matrix:
         path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.23"
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@818ec4d51a1feacefc42ff1b3ec25d4962690f39 # pin@v6
         with:
           version: v1.60.3
           working-directory: ${{ matrix.path }}
@@ -40,10 +43,12 @@ jobs:
     strategy:
       matrix:
         path: ${{ fromJson(needs.matrix-prep.outputs.paths) }}
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.23"
       - name: Run tests with coverage
@@ -62,3 +67,4 @@ jobs:
         name: "Catch errors"
         if: |
           needs.golang-ci.result == 'failure' || contains(needs.*.result, 'failure')
+    permissions: {}
