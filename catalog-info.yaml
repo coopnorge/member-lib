@@ -15,7 +15,7 @@ spec:
     displayName: "Member Lib"
   type: library
   lifecycle: production
-  owner: member
+  owner: member-and-partner
   dependsOn:
     - component:github-workflow-techdocs
     - component:techdocs
