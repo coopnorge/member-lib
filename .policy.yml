@@ -24,7 +24,7 @@ approval_rules:
       teams:
         - "coopnorge/member-and-partner"
       users:
-        - "CoopNorgeReviewBot"
+        - "coop-norge-review-bot"
     options:
       invalidate_on_push: true
       request_review:
