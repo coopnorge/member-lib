@@ -2,6 +2,7 @@ package configloader
 
 import "reflect"
 
+//nolint:revive // TODO: add documentation
 type Option func(*Loader)
 
 // WithTypeHandler registers a custom type conversion function for a specific type T.

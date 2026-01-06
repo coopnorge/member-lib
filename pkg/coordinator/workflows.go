@@ -5,9 +5,11 @@ import (
 	"time"
 )
 
+//nolint:revive // TODO: add documentation
 type WorkflowStatus byte
 
 const (
+	//nolint:revive // TODO: add documentation
 	WorkflowNotStarted WorkflowStatus = iota
 	WorkflowRunning
 	WorkflowCompleted
@@ -31,7 +33,7 @@ type Workflow interface {
 	OnEnd(config *WorkflowRunner, status WorkflowStatus)
 }
 
-// ExTriggerecute runs a workflow with the given configuration and context.
+// Trigger runs a workflow with the given configuration and context.
 func (config *WorkflowRunner) Trigger(ctx context.Context, w Workflow) (WorkflowStatus, error) {
 	w.OnStart(config)
 	status := WorkflowNotStarted

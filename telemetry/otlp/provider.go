@@ -1,3 +1,4 @@
+//nolint:revive // TODO: add documentation
 package otlp
 
 import (
@@ -16,6 +17,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+//nolint:revive // TODO: add documentation
 func Exporters(ctx context.Context) (se sdktrace.SpanExporter, me sdkmetric.Exporter, le sdklog.Exporter, err error) {
 	var errs error
 	te, err := otlptracegrpc.New(ctx)
@@ -36,6 +38,7 @@ func Exporters(ctx context.Context) (se sdktrace.SpanExporter, me sdkmetric.Expo
 	return te, me, le, errs
 }
 
+//nolint:revive // TODO: add documentation
 func Providers(ctx context.Context, res *resource.Resource) (tp *sdktrace.TracerProvider, mp *sdkmetric.MeterProvider, lp *sdklog.LoggerProvider, err error) {
 	se, me, le, err := Exporters(ctx)
 	if err != nil {

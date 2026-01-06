@@ -20,6 +20,7 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
+//nolint:revive // TODO: add documentation
 func Providers(ctx context.Context, res *resource.Resource, traceURL, metricURL string) (tp *sdktrace.TracerProvider, mp *sdkmetric.MeterProvider, lp *sdklog.LoggerProvider, err error) {
 	te, me, le, err := Exporters(ctx, res, traceURL, metricURL)
 	if err != nil {

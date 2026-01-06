@@ -12,6 +12,7 @@ type ConfigLoadError struct {
 	Errors []error
 }
 
+//nolint:revive // TODO: add documentation
 func (e *ConfigLoadError) Add(err error) {
 	if err != nil {
 		e.Errors = append(e.Errors, err)
@@ -19,7 +20,7 @@ func (e *ConfigLoadError) Add(err error) {
 }
 
 func (e *ConfigLoadError) Error() string {
-	var msgs = make([]string, len(e.Errors))
+	msgs := make([]string, len(e.Errors))
 	for i, err := range e.Errors {
 		msgs[i] = err.Error()
 	}
@@ -38,7 +39,7 @@ type FieldError struct {
 }
 
 func (e FieldError) Error() string {
-	return fmt.Sprintf("error processing field %s: %v", e.Field.String(), e.Err)
+	return fmt.Sprintf("error processing field %s: %v", e.String(), e.Err)
 }
 
 func (e FieldError) Unwrap() error {

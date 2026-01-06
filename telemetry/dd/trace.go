@@ -18,6 +18,7 @@ var _ sdktrace.SpanExporter = &ddTraceExporter{}
 type ddTraceExporter struct {
 }
 
+//nolint:revive // TODO: add documentation
 func NewDatadogSpanExporter(opts ...tracer.StartOption) sdktrace.SpanExporter {
 	tracer.Start(opts...)
 	return &ddTraceExporter{}

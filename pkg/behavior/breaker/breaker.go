@@ -93,9 +93,8 @@ func (cb *CircuitBreaker) Proceed(action Action) (any, error) {
 		if cb.isTimeout() {
 			cb.setState(StateHalfOpen)
 			return cb.Proceed(action)
-		} else {
-			return nil, ErrCircuitOpen
 		}
+		return nil, ErrCircuitOpen
 	case StateHalfOpen, StateClosed:
 		result, err := action()
 		if err != nil {

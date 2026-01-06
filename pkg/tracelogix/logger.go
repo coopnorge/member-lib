@@ -45,6 +45,7 @@ type (
 )
 
 const (
+	//nolint:revive // TODO: add documentation
 	LogAdapterFatal LogAdapterLevel = iota
 	LogAdapterError
 	LogAdapterWarn
