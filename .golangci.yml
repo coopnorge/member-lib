@@ -1,19 +1,20 @@
+version: "2"
+
 run:
   timeout: 5m
   tests: false
-  skip-dirs-use-default: true
-  skip-files:
-    - ".*mock\\.go$"
-    - ".*test\\.go$"
 
 output:
-  sort-results: true
-  print-linter-name: true
+  sort-order:
+    - linter
+    - severity
+    - file
 
 linters:
-  fast: false
-  disable:
-    - typecheck
+  exclusions:
+    paths:
+      - ".*mock\\.go$"
+      - ".*test\\.go$"
   enable:
     - unparam
     - unused
@@ -27,9 +28,6 @@ linters:
     - dupl
     - errorlint
     - funlen
-    - gofmt
-    - goimports
-    - gosimple
     - govet
     - gocognit
     - goconst
@@ -39,30 +37,37 @@ linters:
     - gosec
     - prealloc
     - revive
-    - stylecheck
+    - staticcheck
     - whitespace
     - nestif
     - godot
     - gosmopolitan
+  settings:
+    # https://golangci-lint.run/usage/linters/#linters-configuration
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    nestif:
+      min-complexity: 15
+    funlen:
+      lines: 100
+      ignore-comments: true
 
-linters-settings:
-  # https://golangci-lint.run/usage/linters/#linters-configuration
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  goconst:
-    min-len: 2
-    min-occurrences: 3
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-  nestif:
-    min-complexity: 15
-  funlen:
-    lines: 100
-    ignore-comments: true
-
+formatters:
+  exclusions:
+    paths:
+      - ".*mock\\.go$"
+      - ".*test\\.go$"
+  enable:
+    - gofmt
+    - goimports

@@ -11,6 +11,7 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
+//nolint:revive // TODO: add documentation
 type Loader struct {
 	prefix, nameTag, envTag, defaultTag string
 
@@ -24,15 +25,18 @@ type Loader struct {
 	handlers map[reflect.Type]func(string) (any, error)
 }
 
+//nolint:revive // TODO: add documentation
 type Field struct {
 	Value reflect.Value
 	Path  []reflect.StructField
 }
 
+//nolint:revive // TODO: add documentation
 func (f *Field) Last() reflect.StructField {
 	return f.Path[len(f.Path)-1]
 }
 
+//nolint:revive // TODO: add documentation
 func (f *Field) Names() (names []string) {
 	for _, field := range f.Path {
 		names = append(names, field.Name)
@@ -124,6 +128,7 @@ func Load(value any, opts ...Option) error {
 	return loader.Load(value)
 }
 
+//nolint:revive // TODO: add documentation
 func (l *Loader) Load(val any) error {
 	ptrValue := reflect.ValueOf(val)
 	if ptrValue.Kind() != reflect.Pointer {

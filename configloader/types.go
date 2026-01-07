@@ -19,7 +19,6 @@ var defaultTypeHandlers = []Option{
 		return time.ParseDuration(val)
 	}),
 
-	// nolint:unlambda // Explcitiness is good.
 	WithTypeHandler(func(val string) (net.IP, error) {
 		ip := net.ParseIP(val)
 		if ip == nil {

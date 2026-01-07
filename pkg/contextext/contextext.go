@@ -46,13 +46,18 @@ func (ce *ContextExtended[T]) AddValue(key any, value T) {
 
 // GetValue safely retrieves a value from the context.
 func (ce *ContextExtended[T]) GetValue(key any) (T, bool) {
+	var zero T
 	val, ok := ce.values.Load(key)
-	if ok {
-		return val.(T), ok
+	if !ok {
+		return zero, false
 	}
 
-	var zero T
-	return zero, false
+	parsedVal, ok := val.(T)
+	if !ok {
+		return zero, false
+	}
+
+	return parsedVal, true
 }
 
 // RemoveValue safely removes a value from the context.

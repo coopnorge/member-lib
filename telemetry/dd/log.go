@@ -1,3 +1,4 @@
+//nolint:revive // TODO: add documentation
 package dd
 
 import (
@@ -34,6 +35,7 @@ func (p *ddProcessor) OnEmit(ctx context.Context, record *sdklog.Record) error {
 	return nil
 }
 
+//nolint:revive // TODO: add documentation
 func NewDatadogProcessor() sdklog.Processor {
 	return &ddProcessor{}
 }
