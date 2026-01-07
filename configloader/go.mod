@@ -1,10 +1,9 @@
 module github.com/coopnorge/member-lib/configloader
 
-go 1.23.0
+go 1.25.0
 
 require (
-	fortio.org/safecast v1.0.0
-	github.com/ccoveille/go-safecast v1.2.0
+	fortio.org/safecast v1.2.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/stretchr/testify v1.9.0
 )

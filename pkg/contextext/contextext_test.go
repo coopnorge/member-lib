@@ -63,7 +63,7 @@ func TestSafelyExtractExtendedContextFromInterface(t *testing.T) {
 			t.Fatalf("expected no error, got %v", err)
 		}
 
-		assert.Equal(t, extCtx.values, result.values)
+		assert.Equal(t, &extCtx.values, &result.values)
 	})
 
 	t.Run("IncorrectType", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestSafelyExtractExtendedContextFromInterface(t *testing.T) {
 			t.Fatalf("expected no error, got %v", err)
 		}
 
-		assert.Equal(t, extCtx.values, result.values)
+		assert.Equal(t, &extCtx.values, &result.values)
 	})
 
 	t.Run("duplicatedKeyOfContextExt", func(t *testing.T) {
@@ -176,7 +176,7 @@ func TestSafelyExtractExtendedContextFromInterface(t *testing.T) {
 			t.Fatalf("expected no error, got %v", err)
 		}
 
-		assert.Equal(t, extCtx.values, result.values)
+		assert.Equal(t, &extCtx.values, &result.values)
 	})
 
 	t.Run("ContextExtended as struct", func(t *testing.T) {
@@ -191,7 +191,7 @@ func TestSafelyExtractExtendedContextFromInterface(t *testing.T) {
 
 		resultValue, _ := result.GetValue(unitStubContextKey{})
 		assert.True(t, resultValue == expectedValue)
-		assert.Equal(t, extCtx.values, result.values)
+		assert.Equal(t, &extCtx.values, &result.values)
 	})
 
 	t.Run("ContextExtended as ContextExtended", func(t *testing.T) {
