@@ -4,15 +4,18 @@ metadata:
   name: member-lib
 spec:
   description: "Member & Partner Team's Go: Crafted abstract packages for various use cases to enhance productivity and eliminate redundancy."
+  visibility: "public"
+
 
   branches:
-    default: main
+    default: "main"
     protection:
-      - id: main
-        pattern: main
+      - id: "main"
+        pattern: "main"
         requireSignedCommits: false
         requiredStatusChecks:
           checks:
             - "build"
         requiredPullRequestReviews:
           requireCodeOwnerReviews: true
+
