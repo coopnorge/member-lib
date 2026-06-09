@@ -16,7 +16,3 @@ spec:
   type: library
   lifecycle: production
   owner: member-and-partner
-  dependsOn:
-    - component:github-workflow-techdocs
-    - component:techdocs
-    - component:vale-coop
