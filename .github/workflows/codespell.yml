@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: codespell-project/actions-codespell@cf810cf4cbd6cdefe6ef86e55b64d524a16654a7 # master
+      - uses: codespell-project/actions-codespell@3abb875e3aa9713e40eed5aea082672a42f7f95c # master
         with:
           check_filenames: true
           skip: "./vendor,./telemetry,go.mod,go.sum"
