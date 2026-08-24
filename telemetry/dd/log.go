@@ -22,7 +22,7 @@ func (p *ddProcessor) ForceFlush(_ context.Context) error {
 	return nil
 }
 
-//nolint:hugeParam // method defined by external interface
+//nolint:gocritic // hugeParam: method defined by external interface
 func (p *ddProcessor) Enabled(ctx context.Context, _ sdklog.EnabledParameters) bool { return true }
 
 func (p *ddProcessor) OnEmit(ctx context.Context, record *sdklog.Record) error {
