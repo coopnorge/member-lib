@@ -12,7 +12,7 @@ import (
 
 var _ sdklog.Processor = &ddProcessor{}
 
-type ddProcessor struct{
+type ddProcessor struct {
 }
 
 func (p *ddProcessor) Shutdown(_ context.Context) error {
