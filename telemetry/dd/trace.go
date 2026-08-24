@@ -30,8 +30,8 @@ func (e *ddTraceExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOn
 			tracer.StartTime(span.StartTime()),
 			tracer.ResourceName(span.Name()),
 			tracer.WithSpanID(ctxWrapper{span.SpanContext()}.SpanID()),
+			tracer.ChildOf(getParent(span)),
 		}
-		startOpts = append(startOpts, tracer.ChildOf(getParent(span)))
 
 		ddSpan := tracer.StartSpan(
 			span.InstrumentationScope().Name,
