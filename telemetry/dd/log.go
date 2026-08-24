@@ -10,10 +10,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var _ sdklog.Processor = &ddProcessor{
-}
+var _ sdklog.Processor = &ddProcessor{}
 
-type ddProcessor struct{}
+type ddProcessor struct{
+}
 
 func (p *ddProcessor) Shutdown(_ context.Context) error {
 	return nil
