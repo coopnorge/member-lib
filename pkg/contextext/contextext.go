@@ -23,6 +23,7 @@ type (
 
 // NewContextExtended constructor for ContextExtended with a given original context.
 func NewContextExtended[T any](base context.Context) *ContextExtended[T] {
+	//nolint:gosec // cancel is passed elsewhere
 	ctx, cancel := context.WithCancel(base)
 	ctxExt := &ContextExtended[T]{cancel: cancel}
 	ctxExt.ctx = storeContextExtended(ctx, ctxExt)
@@ -34,6 +35,7 @@ func NewContextExtended[T any](base context.Context) *ContextExtended[T] {
 func (ce *ContextExtended[T]) ExtendTimout(d time.Duration) {
 	newDeadline := time.Now().Add(d)
 	if ce.deadline.IsZero() || newDeadline.After(ce.deadline) {
+		//nolint:gosec // cancel is passed elsewhere
 		ce.ctx, ce.cancel = context.WithDeadline(ce.ctx, newDeadline)
 		ce.deadline = newDeadline
 	}
