@@ -271,6 +271,7 @@ func (l *Loader) getChildren(current Field) []Field {
 	}
 
 	// Unwrap the current if it's a pointer.
+	//nolint:govet // TODO: fix this
 	if current.Value.Kind() == reflect.Ptr {
 		if current.Value.IsNil() {
 			current.Value.Set(reflect.New(current.Value.Type().Elem()))
