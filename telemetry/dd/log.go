@@ -10,7 +10,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var _ sdklog.Processor = &ddProcessor{}
+var _ sdklog.Processor = &ddProcessor{
+}
 
 type ddProcessor struct{}
 
