@@ -17,10 +17,12 @@ approval_rules:
         paths:
           - "^.github/workflows/.*$"
           - "^devtools/Dockerfile$"
+          - "^(?:.*/)?go\\.mod$" # go.mod in root or subfolders
+          - "^(?:.*/)?go\\.sum$" # go.sum in root or subfolders
       has_valid_signatures_by_keys:
         key_ids: ["B5690EEEBB952194"]
     requires:
-      count: 1 # A Dependabot pr requires 1 approval of review bot or a user
+      count: 0 # A Dependabot pr requires no approval
       teams:
         - "coopnorge/member-and-partner"
       users:
