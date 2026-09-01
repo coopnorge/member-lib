@@ -16,6 +16,7 @@ spec:
         requiredStatusChecks:
           checks:
             - "build"
+            - 'policy-bot: main'
         requiredPullRequestReviews:
           requireCodeOwnerReviews: true
 
